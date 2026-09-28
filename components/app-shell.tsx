@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/lib/auth-hooks";
 import { Home, ArrowLeftRight, Scale, ScanLine, BarChart3, Wallet } from "lucide-react";
 
 const NAV_LEFT = [
@@ -30,10 +31,17 @@ function NavItem({ href, label, icon: Icon, active }: { href: string; label: str
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { user, loading } = useAuth();
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
-  // Rute admin menggunakan layout desktop penuh (tanpa batasan mobile max-w-md dan tanpa bottom bar)
+  // Rute admin: desktop penuh, tanpa batasan mobile max-w-md dan tanpa bottom bar
   if (pathname.startsWith("/admin")) {
+    return <div className="min-h-dvh w-full bg-background">{children}</div>;
+  }
+
+  // Halaman publik (belum login): landing, login, register, demo → full-width, tanpa bottom nav.
+  // SSR untuk crawler (tanpa cookie) sudah full-width — ini yang di-index Google.
+  if (!loading && !user) {
     return <div className="min-h-dvh w-full bg-background">{children}</div>;
   }
 

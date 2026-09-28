@@ -4,11 +4,74 @@ import { currentMonthKey, monthRange, formatTanggal } from "@/lib/datetime";
 import { formatRupiah } from "@/lib/format";
 import { getIcon } from "@/lib/icons";
 import { QuickActions } from "@/components/quick-actions";
-import { ChevronRight, Scale, Tags, ScanLine, BarChart3, Settings } from "lucide-react";
+import { ChevronRight, Scale, Tags, ScanLine, BarChart3, Settings, Wallet, ArrowDownUp, FileDown, Sparkles } from "lucide-react";
+import type { Metadata } from "next";
 import { Header } from "@/components/layout/header";
 import { validateRequest } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
+
+const FEATURES = [
+  {
+    icon: Wallet,
+    title: "Saldo Gabungan Real-time",
+    desc: "Gabungkan saldo semua rekening, e-wallet, dan uang tunai. Total uangmu terlihat dalam satu kartu.",
+  },
+  {
+    icon: ScanLine,
+    title: "AI Scan Struk",
+    desc: "Foto struk belanja, AI otomatis membaca merchant, item, dan total. Tanpa ketik manual satu per satu.",
+  },
+  {
+    icon: ArrowDownUp,
+    title: "Pemasukan & Pengeluaran",
+    desc: "Catat setiap rupiah masuk dan keluar. Sumber pemasukan jelas, pengeluaran harian terkontrol.",
+  },
+  {
+    icon: Scale,
+    title: "Lacak Hutang & Cicilan",
+    desc: "Pantau paylater, KPR, atau pinjaman: sisa pokok, jatuh tempo, dan riwayat cicilan.",
+  },
+  {
+    icon: BarChart3,
+    title: "Laporan Lengkap",
+    desc: "Laporan harian, mingguan, bulanan, dan tahunan. Lihat ke mana uangmu pergi setiap periode.",
+  },
+  {
+    icon: FileDown,
+    title: "Export PDF & Excel",
+    desc: "Unduh laporan ke PDF, Excel, atau HTML. Siap untuk arsip pribadi atau keperluan lain.",
+  },
+];
+
+const STEPS = [
+  { title: "Daftar gratis", desc: "Buat akun dan mulai trial 3 hari — tanpa kartu kredit." },
+  { title: "Catat transaksi", desc: "Input manual atau foto struk, AI yang mengisi detailnya otomatis." },
+  { title: "Pantau & laporkan", desc: "Lihat saldo, grafik pengeluaran, dan export laporan kapan saja." },
+];
+
+const FAQ = [
+  {
+    q: "Apakah Duitku gratis?",
+    a: "Ya, ada trial gratis 3 hari dengan semua fitur terbuka. Setelah itu, lanjutkan dengan PRO Rp29.000/bulan atau Rp290.000/tahun.",
+  },
+  {
+    q: "Bagaimana cara AI scan struk bekerja?",
+    a: "Kamu foto struk belanja, AI membaca merchant, item, dan total secara otomatis. Hasilnya kamu review dulu sebelum disimpan — AI tidak pernah mengubah saldo tanpa persetujuanmu.",
+  },
+  {
+    q: "Apakah data keuangan saya aman?",
+    a: "Data kamu privat dan hanya bisa diakses dengan akunmu. Kami tidak menjual atau membagikan data kamu ke pihak ketiga.",
+  },
+  {
+    q: "Bisa dipakai di HP?",
+    a: "Bisa. Duitku dirancang mobile-first, jadi nyaman dipakai dari HP maupun komputer.",
+  },
+];
 
 async function getUserData() {
   const { user } = await validateRequest();
@@ -76,25 +139,167 @@ export default async function HomePage() {
 
   if (!data) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="flex min-h-dvh flex-col bg-background">
         <Header />
-        <main className="flex-1 flex items-center justify-center px-4 py-12">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold">Duitku 💰</h1>
-            <p className="mt-2 text-muted">Kelola keuangan pribadi dengan AI scan struk</p>
-            <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <a href="/demo" className="rounded-lg bg-amber-500 px-6 py-3 text-white font-medium hover:bg-amber-600 transition">
+        <main className="flex-1">
+          {/* Hero */}
+          <section className="mx-auto max-w-5xl px-4 pb-12 pt-16 text-center sm:pt-24">
+            <div className="mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-brand/20 bg-brand/5 px-4 py-1.5 text-xs font-medium text-brand">
+              <Sparkles className="size-3.5" /> Aplikasi keuangan pribadi + AI scan struk
+            </div>
+            <h1 className="mx-auto max-w-3xl text-3xl font-extrabold leading-tight tracking-tight sm:text-5xl">
+              Catat Keuangan Pribadi Jadi Mudah,{" "}
+              <span className="text-brand">dari Scan Struk sampai Laporan Bulanan</span>
+            </h1>
+            <p className="mx-auto mt-4 max-w-2xl text-base text-muted sm:text-lg">
+              Duitku bantu kamu catat pemasukan, pengeluaran, tabungan, dan hutang dalam satu
+              aplikasi. Foto struk belanja, AI yang membacanya — tanpa ketik manual. Gratis trial 3
+              hari, tanpa kartu kredit.
+            </p>
+            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <a
+                href="/demo"
+                className="w-full rounded-xl bg-amber-500 px-7 py-3.5 text-center font-semibold text-white transition hover:bg-amber-600 sm:w-auto"
+              >
                 Coba Demo 3 Hari Gratis
               </a>
-              <a href="/register" className="rounded-lg bg-brand px-6 py-3 text-white font-medium hover:bg-brand/90 transition">
-                Daftar & Mulai Trial
-              </a>
-              <a href="/login" className="rounded-lg border border-line px-6 py-3 font-medium hover:bg-accent transition">
-                Masuk
+              <a
+                href="/register"
+                className="w-full rounded-xl bg-brand px-7 py-3.5 text-center font-semibold text-white transition hover:bg-brand/90 sm:w-auto"
+              >
+                Daftar &amp; Mulai Trial
               </a>
             </div>
-          </div>
+            <p className="mt-4 text-xs text-muted">
+              Tanpa kartu kredit · Batalkan kapan saja · Data kamu privat
+            </p>
+          </section>
+
+          {/* Fitur */}
+          <section className="border-t border-line bg-muted/30 py-16">
+            <div className="mx-auto max-w-5xl px-4">
+              <h2 className="text-center text-2xl font-bold sm:text-3xl">
+                Semua yang kamu butuhkan untuk kelola uang
+              </h2>
+              <p className="mx-auto mt-2 max-w-xl text-center text-sm text-muted sm:text-base">
+                Satu aplikasi untuk saldo, transaksi, hutang, dan laporan — dilengkapi AI yang
+                membaca struk belanja otomatis.
+              </p>
+              <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {FEATURES.map((f) => (
+                  <div key={f.title} className="rounded-2xl border border-line bg-card p-5 shadow-sm">
+                    <div className="mb-3 flex size-10 items-center justify-center rounded-xl bg-brand/10 text-brand">
+                      <f.icon className="size-5" />
+                    </div>
+                    <h3 className="font-semibold">{f.title}</h3>
+                    <p className="mt-1 text-sm text-muted">{f.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Cara kerja */}
+          <section className="py-16">
+            <div className="mx-auto max-w-5xl px-4">
+              <h2 className="text-center text-2xl font-bold sm:text-3xl">Mulai dalam 3 langkah</h2>
+              <div className="mt-10 grid gap-6 sm:grid-cols-3">
+                {STEPS.map((s, i) => (
+                  <div key={s.title} className="text-center">
+                    <div className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full bg-brand text-sm font-bold text-white">
+                      {i + 1}
+                    </div>
+                    <h3 className="font-semibold">{s.title}</h3>
+                    <p className="mt-1 text-sm text-muted">{s.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Pricing teaser */}
+          <section className="border-t border-line bg-muted/30 py-16">
+            <div className="mx-auto max-w-3xl px-4 text-center">
+              <h2 className="text-2xl font-bold sm:text-3xl">
+                Gratis 3 hari, lalu <span className="text-brand">Rp29.000/bulan</span>
+              </h2>
+              <p className="mx-auto mt-2 max-w-xl text-sm text-muted sm:text-base">
+                Semua fitur terbuka selama trial. Setelah itu, lanjutkan dengan PRO bulanan
+                Rp29.000 atau tahunan Rp290.000 (hemat ~17%).
+              </p>
+              <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <a
+                  href="/subscribe"
+                  className="w-full rounded-xl border border-line bg-card px-7 py-3 text-center font-semibold transition hover:bg-accent sm:w-auto"
+                >
+                  Lihat Paket PRO
+                </a>
+                <a
+                  href="/register"
+                  className="w-full rounded-xl bg-brand px-7 py-3 text-center font-semibold text-white transition hover:bg-brand/90 sm:w-auto"
+                >
+                  Mulai Trial Gratis
+                </a>
+              </div>
+            </div>
+          </section>
+
+          {/* FAQ */}
+          <section className="py-16">
+            <div className="mx-auto max-w-3xl px-4">
+              <h2 className="text-center text-2xl font-bold sm:text-3xl">
+                Pertanyaan yang sering diajukan
+              </h2>
+              <div className="mt-8 space-y-4">
+                {FAQ.map((f) => (
+                  <div key={f.q} className="rounded-2xl border border-line bg-card p-5">
+                    <h3 className="font-semibold">{f.q}</h3>
+                    <p className="mt-1.5 text-sm text-muted">{f.a}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* CTA akhir */}
+          <section className="border-t border-line py-16">
+            <div className="mx-auto max-w-3xl px-4 text-center">
+              <h2 className="text-2xl font-bold sm:text-3xl">Siap lebih tenang soal uang?</h2>
+              <p className="mt-2 text-sm text-muted sm:text-base">
+                Mulai catat keuanganmu hari ini. Gratis, tanpa kartu kredit.
+              </p>
+              <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <a
+                  href="/register"
+                  className="w-full rounded-xl bg-brand px-8 py-3.5 text-center font-semibold text-white transition hover:bg-brand/90 sm:w-auto"
+                >
+                  Daftar Sekarang
+                </a>
+                <a
+                  href="/demo"
+                  className="w-full rounded-xl bg-amber-500 px-8 py-3.5 text-center font-semibold text-white transition hover:bg-amber-600 sm:w-auto"
+                >
+                  Coba Demo
+                </a>
+              </div>
+            </div>
+          </section>
         </main>
+
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              mainEntity: FAQ.map((f) => ({
+                "@type": "Question",
+                name: f.q,
+                acceptedAnswer: { "@type": "Answer", text: f.a },
+              })),
+            }),
+          }}
+        />
       </div>
     );
   }
@@ -227,17 +432,19 @@ export default async function HomePage() {
           </a>
         </div>
 
-        <a
-          href="/settings"
-          className="flex items-center gap-2.5 rounded-xl bg-card px-3.5 py-3 shadow-sm transition active:scale-[0.99]"
-        >
-          <Settings className="size-5 text-brand" />
-          <div className="flex-1">
-            <p className="text-sm font-semibold">Pengaturan</p>
-            <p className="text-[11px] text-muted">Model AI & mode demo</p>
-          </div>
-          <ChevronRight className="size-4 text-muted" />
-        </a>
+        {user.role === "ADMIN" && (
+          <a
+            href="/settings"
+            className="flex items-center gap-2.5 rounded-xl bg-card px-3.5 py-3 shadow-sm transition active:scale-[0.99]"
+          >
+            <Settings className="size-5 text-brand" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold">Pengaturan</p>
+              <p className="text-[11px] text-muted">Model AI & mode demo</p>
+            </div>
+            <ChevronRight className="size-4 text-muted" />
+          </a>
+        )}
       </main>
     </div>
   );

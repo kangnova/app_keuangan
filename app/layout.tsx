@@ -14,10 +14,54 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL = "https://artaku.my.id";
+
 export const metadata: Metadata = {
-  title: "Duitku — Keuangan Pribadi",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Duitku — Aplikasi Catatan Keuangan Pribadi & AI Scan Struk",
+    template: "%s | Duitku",
+  },
   description:
-    "Catat saldo, pemasukan, pengeluaran, dan hutang. Scan struk dengan AI. Laporan harian hingga tahunan.",
+    "Aplikasi catatan keuangan pribadi: catat pemasukan, pengeluaran, tabungan, dan hutang dalam satu tempat. Scan struk belanja otomatis pakai AI. Laporan harian hingga tahunan + export PDF/Excel. Gratis trial 3 hari.",
+  keywords: [
+    "aplikasi keuangan",
+    "catatan keuangan",
+    "aplikasi catatan pengeluaran",
+    "pencatat keuangan pribadi",
+    "scan struk AI",
+    "aplikasi hutang",
+    "aplikasi tabungan",
+    "laporan keuangan",
+    "kelola keuangan",
+    "duitku",
+  ],
+  applicationName: "Duitku",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: "Duitku",
+    title: "Duitku — Aplikasi Catatan Keuangan Pribadi & AI Scan Struk",
+    description:
+      "Catat pemasukan, pengeluaran, tabungan, dan hutang. Scan struk belanja otomatis pakai AI. Gratis trial 3 hari.",
+    locale: "id_ID",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Duitku — Aplikasi Catatan Keuangan Pribadi",
+    description:
+      "Catat keuangan pribadi + scan struk otomatis pakai AI. Gratis trial 3 hari.",
+  },
 };
 
 export const viewport: Viewport = {
@@ -31,6 +75,28 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="id" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <AppShell>{children}</AppShell>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebApplication",
+              name: "Duitku",
+              url: SITE_URL,
+              applicationCategory: "FinanceApplication",
+              operatingSystem: "Web",
+              inLanguage: "id",
+              description:
+                "Aplikasi catatan keuangan pribadi dengan AI scan struk: catat pemasukan, pengeluaran, tabungan, dan hutang.",
+              offers: {
+                "@type": "Offer",
+                price: "29000",
+                priceCurrency: "IDR",
+                description: "Langganan PRO bulanan Duitku",
+              },
+            }),
+          }}
+        />
         <Toaster position="top-center" richColors />
       </body>
     </html>
