@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,7 @@ const PLANS = [
   },
 ];
 
-export default function SubscribePage() {
+function SubscribeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/";
@@ -165,5 +165,13 @@ export default function SubscribePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SubscribePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-muted">Memuat...</div>}>
+      <SubscribeContent />
+    </Suspense>
   );
 }

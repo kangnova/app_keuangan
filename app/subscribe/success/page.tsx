@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CheckCircle, Loader2, ArrowRight, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
-export default function SubscribeSuccessPage() {
+function SubscribeSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/";
@@ -102,5 +102,13 @@ export default function SubscribeSuccessPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function SubscribeSuccessPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-muted">Memuat...</div>}>
+      <SubscribeSuccessContent />
+    </Suspense>
   );
 }
