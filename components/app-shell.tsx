@@ -32,6 +32,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
+  // Rute admin menggunakan layout desktop penuh (tanpa batasan mobile max-w-md dan tanpa bottom bar)
+  if (pathname.startsWith("/admin")) {
+    return <div className="min-h-dvh w-full bg-background">{children}</div>;
+  }
+
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col">
       <main className="flex-1 px-4 pb-28 pt-5">{children}</main>
