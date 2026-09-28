@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Menu, X, User, LogOut, Shield, Sparkles, CreditCard, Settings } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-hooks";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { toast } from "sonner";
 
 export function Header() {
@@ -73,6 +74,7 @@ export function Header() {
         )}
 
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           {user ? (
             <div className="relative">
               <Button

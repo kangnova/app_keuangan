@@ -34,6 +34,7 @@ import { Input } from "@/components/ui/input";
 import { Select, Label } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-hooks";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface AdminUser {
   id: string;
@@ -288,6 +289,7 @@ export default function AdminPage() {
 
         {/* Right Admin Profile & Quick Links */}
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           <Link
             href="/"
             target="_blank"
