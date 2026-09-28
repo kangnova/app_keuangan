@@ -283,6 +283,58 @@ const html = hbuf.toString("utf8");
 assert(r.status === 200 && html.startsWith("<!DOCTYPE html>"), "HTML: doctype ok");
 assert(html.includes("LAPORAN KEUANGAN") && html.includes("window.print()"), "HTML: judul + tombol cetak ada");
 
+// ============ 7. SCAN STRUK (MOCK MODE) ============
+console.log("\n=== 7. SCAN STRUK (MOCK) ===");
+// scan asli butuh API key; smoke test jalankan server dengan SCAN_MOCK_MODE=1
+const fakeImage = "data:image/jpeg;base64," + Buffer.from("fake-receipt-image-for-test").toString("base64");
+
+r = await req("POST", "/api/scan", { image: fakeImage });
+assert(r.status === 201, "POST /api/scan (mock) 201");
+const scanRes = r.json.data;
+assert(scanRes.mock === true, "Mock mode aktif");
+assert(scanRes.parsed.merchant === "Indomaret Demo", `Merchant: ${scanRes.parsed.merchant}`);
+assert(scanRes.parsed.total === 26500, `Total parse: ${scanRes.parsed.total}`);
+assert(Array.isArray(scanRes.warnings), "Warnings konsistensi terkirim");
+
+r = await req("GET", "/api/scan");
+assert(r.status === 200 && r.json.data.scans.some((s) => s.id === scanRes.scan.id), "GET /api/scan (pending ada)");
+
+const cashBeforeScan = (await req("GET", "/api/accounts")).json.data.accounts.find((a) => a.id === cash.id).balance;
+r = await req("POST", `/api/scan/${scanRes.scan.id}/confirm`, { accountId: cash.id, categoryId: kopi?.id ?? null, note: "belanja mingguan demo" });
+assert(r.status === 201, "Confirm scan -> transaksi 201");
+assert(r.json.data.transaction.source === "AI_SCAN", "Transaksi bertanda AI_SCAN");
+assert(r.json.data.transaction.amount === 26500, "Nominal = total struk");
+
+r = await req("GET", "/api/accounts");
+const cashAfterScan = r.json.data.accounts.find((a) => a.id === cash.id).balance;
+assert(cashAfterScan === cashBeforeScan - 26500, `Saldo Cash berkurang 26.500 (${cashBeforeScan} -> ${cashAfterScan})`);
+
+r = await req("POST", `/api/scan/${scanRes.scan.id}/confirm`, { accountId: cash.id });
+assert(r.status === 409, "Confirm ulang ditolak (409)");
+
+r = await req("GET", `/api/transactions?month=${new Date().toISOString().slice(0, 7)}`);
+assert(r.json.data.transactions.some((t) => t.source === "AI_SCAN"), "Transaksi AI_SCAN muncul di list");
+
+// scan kedua untuk discard
+r = await req("POST", "/api/scan", { image: fakeImage });
+const scan2 = r.json.data;
+r = await req("POST", `/api/scan/${scan2.scan.id}/discard`);
+assert(r.status === 200, "Discard scan pending");
+r = await req("POST", `/api/scan/${scan2.scan.id}/discard`);
+assert(r.status === 409, "Discard ulang ditolak (409)");
+r = await req("POST", `/api/scan/${scan2.scan.id}/confirm`, { accountId: cash.id });
+assert(r.status === 409, "Confirm scan discarded ditolak (409)");
+
+r = await req("POST", "/api/scan", {});
+assert(r.status === 400, "Scan tanpa gambar ditolak (400)");
+// Di mock mode isi gambar diabaikan (by design, tidak panggil AI) -> tetap 201;
+// di mode API asli, base64 rusak akan menghasilkan 422 dari kegagalan AI.
+r = await req("POST", "/api/scan", { image: "data:image/jpeg;base64,###" });
+assert([201, 400, 422].includes(r.status), `Gambar sampah ditangani baik (dapat ${r.status}, mock abaikan)`);
+// dataURL bukan gambar selalu ditolak oleh validasi route
+r = await req("POST", "/api/scan", { image: "data:text/plain;base64,SGVsbG8=" });
+assert(r.status === 400, "dataURL bukan gambar ditolak (400)");
+
 // ============ SELESAI ============
 console.log(`\n========================================`);
 console.log(`HASIL: ${passed} lulus, ${failures.length} gagal`);

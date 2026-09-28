@@ -11,7 +11,7 @@ laporan harian/mingguan/bulanan/tahunan yang bisa di-export ke HTML/PDF/Excel.
 - **Next.js 16** (App Router) + TypeScript + Tailwind CSS v4
 - **Prisma 6** + SQLite (siap migrasi ke PostgreSQL)
 - **Recharts** (grafik) · **ExcelJS** (export .xlsx) · **pdfmake 0.2** (export PDF)
-- AI: Sumopod AI Gateway (OpenAI-compatible) — *datang di Milestone 4*
+- **AI Scan Struk**: Sumopod AI Gateway (OpenAI-compatible, SDK `openai`)
 
 ## Status Milestone
 
@@ -20,7 +20,7 @@ laporan harian/mingguan/bulanan/tahunan yang bisa di-export ke HTML/PDF/Excel.
 | 1 | Fondasi: Next.js + TS + Prisma + schema DB + seed | ✅ |
 | 2 | CRUD Akun, Transaksi (income/expense/transfer), Kategori, **Pencatatan Hutang** | ✅ |
 | 3 | Dashboard + Laporan 4 periode + charts + **Export Excel/PDF/HTML** | ✅ |
-| 4 | AI Scan Struk via Sumopod + flow review | 🔜 |
+| 4 | AI Scan Struk via Sumopod + flow review | ✅ *(isi API key untuk aktif)* |
 | 5 | Export HTML / PDF / Excel | 🔜 |
 | 6 | PWA + passcode + polish UI | 🔜 |
 | 7 | Docker + deploy Sumopod Container | 🔜 |
@@ -40,6 +40,10 @@ npm run dev
 ```
 
 Buka [http://localhost:3000](http://localhost:3000).
+
+> 📷 **Aktifkan AI Scan Struk**: isi `SUMOPOD_API_KEY` di `.env` (dashboard Sumopod →
+> AI Models). Tanpa API key, set `SCAN_MOCK_MODE=1` untuk mencoba alur scan dengan
+> data demo.
 
 ### Command database
 
@@ -78,7 +82,8 @@ node scripts/smoke.mjs
 Lihat `.env.example`. Untuk fitur AI (Milestone 4) nanti dibutuhkan:
 
 ```env
-SUMOPOD_API_KEY="dari dashboard sumopod"
-SUMOPOD_BASE_URL="https://api.sumopod.com/v1"
-SUMOPOD_VISION_MODEL="gpt-4o"
+SUMOPOD_API_KEY="sk-... dari dashboard sumopod"
+SUMOPOD_BASE_URL="https://ai.sumopod.com/v1"
+SUMOPOD_VISION_MODEL="gpt-4o-mini"   # atau gpt-4o / gemini-2.5-flash
+SCAN_MOCK_MODE="0"                    # 1 = demo tanpa panggil AI (untuk tes UI)
 ```

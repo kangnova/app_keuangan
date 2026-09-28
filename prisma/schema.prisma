@@ -103,7 +103,8 @@ model Debt {
 /// jadi APPROVED (membentuk 1 Transaction EXPENSE) atau DISCARDED.
 model ReceiptScan {
   id            String   @id @default(cuid())
-  imagePath     String? // path arsip foto struk (optional di Milestone 1)
+  imagePath     String? // tidak dipakai (arsip foto disimpan di DB agar ikut ter-backup)
+  imageData     String? // dataURL foto terkompres (JPEG <=1280px) untuk arsip
   status        String   @default("PENDING") // PENDING | APPROVED | DISCARDED
   merchant      String? // nama toko dari hasil AI, cth "Indomaret"
   parsedJson    String // hasil mentah AI (JSON: items, subtotal, tax, total, dst.)

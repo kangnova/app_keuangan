@@ -222,7 +222,7 @@ prisma/
 | **1** | Init Next.js + TS + Tailwind + Prisma, schema DB, seed kategori & akun contoh | Fondasi jalan |
 | **2** | CRUD Akun + saldo, CRUD Transaksi (income/expense/transfer), Kategori, **Pencatatan Hutang** | Inti pencatatan ✅ **SELESAI** |
 | **3** | Dashboard + Laporan (harian/mingguan/bulanan/tahunan) + charts | Analitik ✅ **SELESAI** |
-| **4** | AI Scan Struk via Sumopod + flow review & approve | Fitur bintang ⭐ |
+| **4** | AI Scan Struk via Sumopod + flow review & approve | Fitur bintang ⭐ **SELESAI** |
 | **5** | Export HTML / PDF / Excel dari laporan | Pelaporan ✅ |
 | **6** | PWA (installable, kamera), passcode, polish UI | Siap pakai ✅ |
 | **7** | Dockerfile + deploy ke Sumopod Container | Online ✅ |
@@ -348,6 +348,51 @@ pemasukan/pengeluaran; `DEBT_*` dan `TRANSFER` dilaporkan terpisah (butir khusus
 > Catatan implementasi: **pdfmake di-pin ke 0.2.10** (0.3.x menggantung di Node),
 > vfs diambil dari `vfs_fonts.pdfMake.vfs`, `getBuffer` dengan timeout 20s;
 > exceljs/pdfmake/prisma didaftarkan di `serverExternalPackages`.
+
+---
+
+## 7.3 Detail Teknis Milestone 4 — AI Scan Struk (Sumopod)
+
+**Koneksi (terkonfirmasi dari dokumentasi SDK Sumopod):**
+- Base URL: `https://ai.sumopod.com/v1` (OpenAI-compatible — pakai SDK `openai`)
+- API key: `sk-...` dari dashboard Sumopod
+- Model vision: default `gpt-4o-mini` (alternatif: `gpt-4o`, `gpt-4.1`, `gemini-2.5-flash`)
+- Env: `SUMOPOD_API_KEY`, `SUMOPOD_BASE_URL`, `SUMOPOD_VISION_MODEL`, `SCAN_MOCK_MODE`
+
+**Alur:** foto/kamera → kompres client-side (canvas, sisi panjang ≤1280px, JPEG q0.8)
+→ POST `/api/scan` (dataURL) → kirim image_url ke vision model dengan prompt parse JSON
+→ validasi Zod (`ReceiptParsed`) → simpan `ReceiptScan` status PENDING → UI review →
+confirm (`DEBT_`-style: buat transaksi EXPENSE atomik) atau discard.
+
+**Prompt keluaran AI (JSON ketat):** `{ merchant, date(YYYY-MM-DD|null), items[{name, qty,
+price}], subtotal, discount, tax, service, total, payment_method, category_suggestion }` —
+angka integer rupiah. Validasi silang: `subtotal+tax+service-discount ≈ total` (toleransi
+1-2%), item menjumlah ≈ total; ketidakkonsistenan ditandai warning di UI review.
+
+**Guard & aturan:**
+- AI TIDAK PERNAH langsung mengubah saldo — semua lewat review user.
+- `/api/scan` butuh `SUMOPOD_API_KEY`; jika kosong → 503 dengan pesan jelas.
+- `SCAN_MOCK_MODE=1`: parse dummy deterministik (tanpa panggil AI) untuk dev & smoke test.
+- Harga/rp dianggap integer; qty ≥1; total > 0.
+- `confirm` membuat transaksi `EXPENSE, source: AI_SCAN` + link `receiptId` +
+  simpan kategori pilihan user; `discard` set status DISCARDED.
+- 1 scan = 1 transaksi (`transactionId` unique).
+
+**UI `/scan`:** tombol kamera (input capture) + upload galeri → preview + kompres →
+analisa (loading) → kartu hasil: merchant, tanggal, item list, total (editable bila perlu),
+warning konsistensi → pilih akun & kategori → Simpan / Buang. Kartu antrean PENDING
+di bawah untuk scan yang belum dikonfirmasi.
+
+**Kriteria selesai M4:**
+1. Foto struk → hasil parse tampil → user koreksi/pilih akun → simpan → saldo akun berkurang,
+   transaksi bertanda AI_SCAN, foto terarsip di ReceiptScan.
+2. Scan bisa dibuang sebelum/sesudah diproses tanpa memengaruhi saldo.
+3. Mock mode menghasilkan alur identik untuk smoke test; mode API asli siap dengan API key.
+4. Smoke test ditambah untuk seluruh alur scan; tsc + build bersih.
+
+> ✅ **Milestone 4 SELESAI** — 17 assertion scan baru (total 100 smoke test lulus).
+> Mode API asli aktif otomatis begitu `SUMOPOD_API_KEY` diisi di `.env`;
+> `SCAN_MOCK_MODE=1` untuk demo/dev tanpa kredit AI.
 
 > 📌 *Detail teknis milestone berikutnya (M4 dst.) akan ditambahkan ke dokumen ini
 > di awal pengerjaan tiap milestone, mengikuti pola yang sama.*

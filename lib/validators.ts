@@ -142,3 +142,11 @@ export function noteRequiredError(
   }
   return null;
 }
+
+// ===== Scan struk =====
+export const scanConfirmSchema = z.object({
+  accountId: z.string().min(1, "Akun sumber wajib dipilih"),
+  categoryId: optionalId,
+  date: dateInput, // override tanggal struk jika salah
+  note: nullableString, // override catatan
+});
