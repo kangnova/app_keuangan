@@ -3,17 +3,21 @@ import { getDebtRemaining } from "@/lib/balance";
 import { handle, ok, notFound, badRequest, parseBody } from "@/lib/api";
 import { debtActionSchema } from "@/lib/validators";
 import { formatRupiah } from "@/lib/format";
+import { getUserIdFromRequest } from "@/lib/api-auth";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function POST(req: Request, { params }: Ctx) {
   return handle(async () => {
+    const userId = await getUserIdFromRequest(req as any);
+    if (!userId) return fail(401, "Unauthorized");
+
     const { id } = await params;
-    const debt = await db.debt.findUnique({ where: { id } });
+    const debt = await db.debt.findFirst({ where: { id, userId } });
     if (!debt) return notFound("Hutang");
 
     const input = await parseBody(req, debtActionSchema);
-    const remaining = await getDebtRemaining(id);
+    const remaining = await getDebtRemaining(id, userId);
     if (remaining === null) return notFound("Hutang");
     if (remaining <= 0) return badRequest("Hutang ini sudah lunas");
     if (input.amount > remaining) {
@@ -21,7 +25,7 @@ export async function POST(req: Request, { params }: Ctx) {
     }
 
     const accountId = input.accountId ?? debt.accountId;
-    const account = await db.account.findUnique({ where: { id: accountId } });
+    const account = await db.account.findFirst({ where: { id: accountId, userId } });
     if (!account) return badRequest("Akun pembayaran tidak ditemukan");
 
     const willBeSettled = remaining - input.amount === 0;
@@ -35,6 +39,7 @@ export async function POST(req: Request, { params }: Ctx) {
           accountId,
           debtId: id,
           source: "MANUAL",
+          userId,
         },
         include: { account: true, debt: true },
       }),
@@ -45,4 +50,8 @@ export async function POST(req: Request, { params }: Ctx) {
     ]);
     return ok({ transaction, remaining: remaining - input.amount, settled: willBeSettled }, { status: 201 });
   });
+}
+
+function fail(status: number, message: string) {
+  return { status, message };
 }

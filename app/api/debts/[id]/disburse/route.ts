@@ -1,18 +1,22 @@
 import { db } from "@/lib/db";
 import { handle, ok, notFound, badRequest, parseBody } from "@/lib/api";
 import { debtActionSchema } from "@/lib/validators";
+import { getUserIdFromRequest } from "@/lib/api-auth";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function POST(req: Request, { params }: Ctx) {
   return handle(async () => {
+    const userId = await getUserIdFromRequest(req as any);
+    if (!userId) return fail(401, "Unauthorized");
+
     const { id } = await params;
-    const debt = await db.debt.findUnique({ where: { id } });
+    const debt = await db.debt.findFirst({ where: { id, userId } });
     if (!debt) return notFound("Hutang");
 
     const input = await parseBody(req, debtActionSchema);
     const accountId = input.accountId ?? debt.accountId;
-    const account = await db.account.findUnique({ where: { id: accountId } });
+    const account = await db.account.findFirst({ where: { id: accountId, userId } });
     if (!account) return badRequest("Akun penerima tidak ditemukan");
 
     const [transaction] = await db.$transaction([
@@ -25,12 +29,16 @@ export async function POST(req: Request, { params }: Ctx) {
           accountId,
           debtId: id,
           source: "MANUAL",
+          userId,
         },
         include: { account: true, debt: true },
       }),
-      // Hutang yang tadinya lunas bisa aktif lagi kalau dicairkan ulang
       db.debt.update({ where: { id }, data: { status: "ACTIVE" } }),
     ]);
     return ok({ transaction }, { status: 201 });
   });
+}
+
+function fail(status: number, message: string) {
+  return { status, message };
 }

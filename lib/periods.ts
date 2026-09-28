@@ -109,6 +109,7 @@ export type ReportData = {
   period: Period;
   key: string;
   label: string;
+  userId: string;
   summary: {
     income: number;
     expense: number;

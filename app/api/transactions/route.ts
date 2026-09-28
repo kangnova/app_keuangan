@@ -2,9 +2,13 @@ import { db } from "@/lib/db";
 import { handle, ok, badRequest, parseBody } from "@/lib/api";
 import { transactionCreateSchema, noteRequiredError } from "@/lib/validators";
 import { currentMonthKey, monthRange } from "@/lib/datetime";
+import { getUserIdFromRequest } from "@/lib/api-auth";
 
 export async function GET(req: Request) {
   return handle(async () => {
+    const userId = await getUserIdFromRequest(req as any);
+    if (!userId) return { transactions: [], month: currentMonthKey() };
+
     const url = new URL(req.url);
     const month = url.searchParams.get("month") ?? currentMonthKey();
     if (!/^\d{4}-\d{2}$/.test(month)) return badRequest("Format bulan harus YYYY-MM");
@@ -15,6 +19,7 @@ export async function GET(req: Request) {
     const { start, end } = monthRange(month);
     const transactions = await db.transaction.findMany({
       where: {
+        userId,
         date: { gte: start, lt: end },
         ...(type ? { type } : {}),
         ...(accountId ? { accountId } : {}),
@@ -34,11 +39,14 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   return handle(async () => {
+    const userId = await getUserIdFromRequest(req as any);
+    if (!userId) return fail(401, "Unauthorized");
+
     const input = await parseBody(req, transactionCreateSchema);
     const [account, toAccount, category] = await Promise.all([
-      db.account.findUnique({ where: { id: input.accountId } }),
-      input.toAccountId ? db.account.findUnique({ where: { id: input.toAccountId } }) : null,
-      input.categoryId ? db.category.findUnique({ where: { id: input.categoryId } }) : null,
+      db.account.findFirst({ where: { id: input.accountId, userId } }),
+      input.toAccountId ? db.account.findFirst({ where: { id: input.toAccountId, userId } }) : null,
+      input.categoryId ? db.category.findFirst({ where: { id: input.categoryId, userId } }) : null,
     ]);
     if (!account) return badRequest("Akun sumber tidak ditemukan");
     if (input.toAccountId && !toAccount) return badRequest("Akun tujuan tidak ditemukan");
@@ -62,9 +70,14 @@ export async function POST(req: Request) {
         toAccountId: input.toAccountId,
         categoryId: input.categoryId,
         source: "MANUAL",
+        userId,
       },
       include: { category: true, account: true, toAccount: true },
     });
     return ok(transaction, { status: 201 });
   });
+}
+
+function fail(status: number, message: string) {
+  return { status, message };
 }

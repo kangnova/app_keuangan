@@ -1,13 +1,17 @@
 import { db } from "@/lib/db";
 import { handle, ok, notFound, badRequest, parseBody } from "@/lib/api";
 import { transactionUpdateSchema, noteRequiredError } from "@/lib/validators";
+import { getUserIdFromRequest } from "@/lib/api-auth";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function PATCH(req: Request, { params }: Ctx) {
   return handle(async () => {
+    const userId = await getUserIdFromRequest(req as any);
+    if (!userId) return fail(401, "Unauthorized");
+
     const { id } = await params;
-    const existing = await db.transaction.findUnique({ where: { id } });
+    const existing = await db.transaction.findFirst({ where: { id, userId } });
     if (!existing) return notFound("Transaksi");
 
     const input = await parseBody(req, transactionUpdateSchema);
@@ -31,13 +35,12 @@ export async function PATCH(req: Request, { params }: Ctx) {
     if (data.categoryId && (existing.type === "TRANSFER" || existing.type.startsWith("DEBT_"))) {
       return badRequest("Transaksi hutang/transfer tidak pakai kategori");
     }
-    // Aturan catatan dicek saat create, atau saat PATCH menyentuh note/kategori
     if (input.note !== undefined || input.categoryId !== undefined) {
       const effCategoryId = (data.categoryId as string | null | undefined) ?? existing.categoryId;
       const effNote = (data.note as string | null | undefined) ?? existing.note;
       let catName: string | null = null;
       if (effCategoryId) {
-        const c = await db.category.findUnique({ where: { id: effCategoryId }, select: { name: true } });
+        const c = await db.category.findFirst({ where: { id: effCategoryId, userId }, select: { name: true } });
         catName = c?.name ?? null;
       }
       const noteError = noteRequiredError(existing.type, catName, effNote);
@@ -53,12 +56,19 @@ export async function PATCH(req: Request, { params }: Ctx) {
   });
 }
 
-export async function DELETE(_req: Request, { params }: Ctx) {
+export async function DELETE(req: Request, { params }: Ctx) {
   return handle(async () => {
+    const userId = await getUserIdFromRequest(req as any);
+    if (!userId) return fail(401, "Unauthorized");
+
     const { id } = await params;
-    const existing = await db.transaction.findUnique({ where: { id } });
+    const existing = await db.transaction.findFirst({ where: { id, userId } });
     if (!existing) return notFound("Transaksi");
     await db.transaction.delete({ where: { id } });
     return ok({ deleted: id });
   });
+}
+
+function fail(status: number, message: string) {
+  return { status, message };
 }

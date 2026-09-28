@@ -1,13 +1,17 @@
 import { db } from "@/lib/db";
 import { handle, ok, notFound, fail, parseBody } from "@/lib/api";
 import { debtUpdateSchema } from "@/lib/validators";
+import { getUserIdFromRequest } from "@/lib/api-auth";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function PATCH(req: Request, { params }: Ctx) {
   return handle(async () => {
+    const userId = await getUserIdFromRequest(req as any);
+    if (!userId) return fail(401, "Unauthorized");
+
     const { id } = await params;
-    const existing = await db.debt.findUnique({ where: { id } });
+    const existing = await db.debt.findFirst({ where: { id, userId } });
     if (!existing) return notFound("Hutang");
 
     const input = await parseBody(req, debtUpdateSchema);
@@ -27,13 +31,16 @@ export async function PATCH(req: Request, { params }: Ctx) {
   });
 }
 
-export async function DELETE(_req: Request, { params }: Ctx) {
+export async function DELETE(req: Request, { params }: Ctx) {
   return handle(async () => {
+    const userId = await getUserIdFromRequest(req as any);
+    if (!userId) return fail(401, "Unauthorized");
+
     const { id } = await params;
-    const existing = await db.debt.findUnique({ where: { id } });
+    const existing = await db.debt.findFirst({ where: { id, userId } });
     if (!existing) return notFound("Hutang");
 
-    const txCount = await db.transaction.count({ where: { debtId: id } });
+    const txCount = await db.transaction.count({ where: { debtId: id, userId } });
     if (txCount > 0) {
       return fail(409, "Hutang ini sudah punya riwayat pembayaran/pencairan, tidak bisa dihapus.");
     }

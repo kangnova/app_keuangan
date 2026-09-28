@@ -2,21 +2,26 @@ import { db } from "@/lib/db";
 import { getDebtRemainingMap } from "@/lib/balance";
 import { handle, ok, badRequest, parseBody } from "@/lib/api";
 import { debtCreateSchema } from "@/lib/validators";
+import { getUserIdFromRequest } from "@/lib/api-auth";
 
-export async function GET() {
+export async function GET(req: Request) {
   return handle(async () => {
+    const userId = await getUserIdFromRequest(req as any);
+    if (!userId) return { debts: [], totalRemaining: 0 };
+
     const [debts, remainingMap] = await Promise.all([
       db.debt.findMany({
+        where: { userId },
         include: { account: { select: { id: true, name: true, color: true } } },
         orderBy: [{ status: "asc" }, { createdAt: "desc" }],
       }),
-      getDebtRemainingMap(),
+      getDebtRemainingMap(userId),
     ]);
 
     const paidRows = await db.transaction.groupBy({
       by: ["debtId"],
       _sum: { amount: true },
-      where: { type: "DEBT_PAYMENT", debtId: { not: null } },
+      where: { userId, type: "DEBT_PAYMENT", debtId: { not: null } },
     });
     const paidMap = new Map(paidRows.map((r) => [r.debtId!, r._sum.amount ?? 0]));
 
@@ -38,8 +43,11 @@ export async function GET() {
 
 export async function POST(req: Request) {
   return handle(async () => {
+    const userId = await getUserIdFromRequest(req as any);
+    if (!userId) return fail(401, "Unauthorized");
+
     const input = await parseBody(req, debtCreateSchema);
-    const account = await db.account.findUnique({ where: { id: input.accountId } });
+    const account = await db.account.findFirst({ where: { id: input.accountId, userId } });
     if (!account) return badRequest("Akun terkait tidak ditemukan");
 
     const debt = await db.$transaction(async (tx) => {
@@ -52,11 +60,9 @@ export async function POST(req: Request) {
           interestInfo: input.interestInfo,
           accountId: input.accountId,
           note: input.note,
+          userId,
         },
       });
-      // Uang langsung cair saat hutang dicatat -> buatkan transaksi pencairan.
-      // source DEBT_OPENING = pembukaan, TIDAK dihitung lagi di rumus sisa pokok
-      // (pokok sudah terwakili oleh initialAmount) tapi TETAP menambah saldo akun.
       if (input.moneyReceived) {
         await tx.transaction.create({
           data: {
@@ -67,6 +73,7 @@ export async function POST(req: Request) {
             accountId: input.accountId,
             debtId: created.id,
             source: "DEBT_OPENING",
+            userId,
           },
         });
       }
@@ -74,4 +81,8 @@ export async function POST(req: Request) {
     });
     return ok(debt, { status: 201 });
   });
+}
+
+function fail(status: number, message: string) {
+  return { status, message };
 }

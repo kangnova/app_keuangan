@@ -52,11 +52,11 @@ function dayStart(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-export async function buildReport(period: Period, key: string): Promise<ReportData> {
+export async function buildReport(userId: string, period: Period, key: string): Promise<ReportData> {
   const { start, end } = periodRange(period, key);
 
   const txs = await db.transaction.findMany({
-    where: { date: { gte: start, lt: end } },
+    where: { userId, date: { gte: start, lt: end } },
     include: {
       category: { select: { name: true, color: true } },
       account: { select: { id: true, name: true, color: true } },
@@ -132,9 +132,9 @@ export async function buildReport(period: Period, key: string): Promise<ReportDa
 
   // ===== Snapshot kondisi =====
   const [accounts, balances, debtMap] = await Promise.all([
-    db.account.findMany({ where: { isActive: true }, orderBy: { createdAt: "asc" } }),
-    getAccountBalances(),
-    getDebtRemainingMap(),
+    db.account.findMany({ where: { userId, isActive: true }, orderBy: { createdAt: "asc" } }),
+    getAccountBalances(userId),
+    getDebtRemainingMap(userId),
   ]);
   let accountsTotal = 0;
   const accountRows = accounts.map((a) => {
@@ -143,7 +143,7 @@ export async function buildReport(period: Period, key: string): Promise<ReportDa
     return { id: a.id, name: a.name, type: a.type, balance: b };
   });
   let totalDebt = 0;
-  for (const d of await db.debt.findMany({ where: { status: "ACTIVE" } })) {
+  for (const d of await db.debt.findMany({ where: { userId, status: "ACTIVE" } })) {
     const rem = debtMap.get(d.id) ?? d.initialAmount;
     if (rem > 0) totalDebt += rem;
   }
@@ -152,6 +152,7 @@ export async function buildReport(period: Period, key: string): Promise<ReportDa
     period,
     key,
     label: periodLabel(period, key),
+    userId,
     summary: {
       income,
       expense,

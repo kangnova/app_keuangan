@@ -2,16 +2,20 @@ import { db } from "@/lib/db";
 import { handle, badRequest } from "@/lib/api";
 import { buildReport, currentKey, isValidPeriodKey, periodRange, type Period, type ReportData } from "@/lib/reports";
 import { formatRupiah } from "@/lib/format";
+import { getUserIdFromRequest } from "@/lib/api-auth";
 
 const PERIOD_VALUES = ["day", "week", "month", "year"];
 
 async function resolveReport(req: Request): Promise<ReportData | Response> {
+  const userId = await getUserIdFromRequest(req as any);
+  if (!userId) return fail(401, "Unauthorized");
+
   const url = new URL(req.url);
   const period = (url.searchParams.get("period") ?? "month") as Period;
   if (!PERIOD_VALUES.includes(period)) return badRequest("Periode harus: day, week, month, atau year");
   const key = url.searchParams.get("key") ?? currentKey(period);
   if (!isValidPeriodKey(period, key)) return badRequest("Kunci periode tidak valid");
-  return buildReport(period, key);
+  return buildReport(userId, period, key);
 }
 
 function periodFilename(report: ReportData): string {
@@ -92,7 +96,7 @@ async function exportExcel(report: ReportData): Promise<Response> {
     DEBT_PAYMENT: "Cicilan Hutang", DEBT_DISBURSEMENT: "Cair Hutang",
   };
   const txs = await db.transaction.findMany({
-    where: { date: { gte: start, lt: end } },
+    where: { userId: report.userId ?? "", date: { gte: start, lt: end } },
     include: {
       category: { select: { name: true } },
       account: { select: { name: true } },
@@ -234,7 +238,6 @@ async function exportPdf(report: ReportData): Promise<Response> {
     },
   };
 
-  // Node-safe: getBuffer dengan timeout, supaya kegagalan render tidak menggantung request
   const buf = await new Promise<Buffer>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("Timeout membuat PDF")), 20000);
     try {
@@ -256,7 +259,7 @@ async function exportPdf(report: ReportData): Promise<Response> {
 }
 
 async function exportHtml(report: ReportData): Promise<Response> {
-  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const esc = (s: string) => s.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">");
   const money = (n: number) => formatRupiah(n);
   const s = report.summary;
 
@@ -365,4 +368,8 @@ export async function GET(req: Request) {
     if (format === "html") return exportHtml(report);
     return badRequest("Format harus: xlsx, pdf, atau html");
   });
+}
+
+function fail(status: number, message: string) {
+  return { status, message };
 }

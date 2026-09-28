@@ -4,25 +4,25 @@ import { db } from "./db";
 //   saldo = initialBalance + Σ(income, disbursement) − Σ(expense, payment)
 //           + Σ(transfer masuk) − Σ(transfer keluar)
 
-export async function getAccountBalances(): Promise<Map<string, number>> {
+export async function getAccountBalances(userId: string): Promise<Map<string, number>> {
   const [plusRows, minusRows, transferOutRows, transferInRows, accounts] = await Promise.all([
     db.transaction.groupBy({
       by: ["accountId"],
       _sum: { amount: true },
-      where: { type: { in: ["INCOME", "DEBT_DISBURSEMENT"] } },
+      where: { userId, type: { in: ["INCOME", "DEBT_DISBURSEMENT"] } },
     }),
     db.transaction.groupBy({
       by: ["accountId"],
       _sum: { amount: true },
-      where: { type: { in: ["EXPENSE", "DEBT_PAYMENT"] } },
+      where: { userId, type: { in: ["EXPENSE", "DEBT_PAYMENT"] } },
     }),
-    db.transaction.groupBy({ by: ["accountId"], _sum: { amount: true }, where: { type: "TRANSFER" } }),
+    db.transaction.groupBy({ by: ["accountId"], _sum: { amount: true }, where: { userId, type: "TRANSFER" } }),
     db.transaction.groupBy({
       by: ["toAccountId"],
       _sum: { amount: true },
-      where: { type: "TRANSFER", toAccountId: { not: null } },
+      where: { userId, type: "TRANSFER", toAccountId: { not: null } },
     }),
-    db.account.findMany({ select: { id: true, initialBalance: true } }),
+    db.account.findMany({ where: { userId }, select: { id: true, initialBalance: true } }),
   ]);
 
   const map = new Map<string, number>();
@@ -38,18 +38,18 @@ export async function getAccountBalances(): Promise<Map<string, number>> {
 // Sisa pokok hutang = initialAmount + Σ(pencairan manual) − Σ(pembayaran).
 // Pencairan bertanda source "DEBT_OPENING" (uang cair saat hutang dicatat)
 // TIDAK dihitung karena pokoknya sudah terwakili oleh initialAmount.
-export async function getDebtRemainingMap(): Promise<Map<string, number>> {
+export async function getDebtRemainingMap(userId: string): Promise<Map<string, number>> {
   const [debts, disbursedRows, paidRows] = await Promise.all([
-    db.debt.findMany({ select: { id: true, initialAmount: true } }),
+    db.debt.findMany({ where: { userId }, select: { id: true, initialAmount: true } }),
     db.transaction.groupBy({
       by: ["debtId"],
       _sum: { amount: true },
-      where: { type: "DEBT_DISBURSEMENT", debtId: { not: null }, source: { not: "DEBT_OPENING" } },
+      where: { userId, type: "DEBT_DISBURSEMENT", debtId: { not: null }, source: { not: "DEBT_OPENING" } },
     }),
     db.transaction.groupBy({
       by: ["debtId"],
       _sum: { amount: true },
-      where: { type: "DEBT_PAYMENT", debtId: { not: null } },
+      where: { userId, type: "DEBT_PAYMENT", debtId: { not: null } },
     }),
   ]);
 
@@ -60,7 +60,7 @@ export async function getDebtRemainingMap(): Promise<Map<string, number>> {
   return map;
 }
 
-export async function getDebtRemaining(debtId: string): Promise<number | null> {
-  const map = await getDebtRemainingMap();
+export async function getDebtRemaining(debtId: string, userId: string): Promise<number | null> {
+  const map = await getDebtRemainingMap(userId);
   return map.get(debtId) ?? null;
 }
