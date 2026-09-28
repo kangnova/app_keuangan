@@ -1,0 +1,116 @@
+// Prisma schema — Duitku (Personal Finance Tracker)
+// Konvensi penting:
+// - Semua nilai uang = INTEGER rupiah (tanpa desimal) untuk hindari bug pembulatan.
+// - amount selalu positif; arah duit ditentukan oleh `type` / relasi transfer.
+// - Saldo akun TIDAK disimpan, selalu dihitung dari transaksi (lihat src/lib/balance.ts).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Tempat uang disimpan: rekening bank, e-wallet, atau uang cash di dompet.
+model Account {
+  id             String        @id @default(cuid())
+  name           String // "BCA", "GoPay", "Dompet Cash", dst.
+  type           String        @default("CASH") // BANK | EWALLET | CASH
+  initialBalance Int           @default(0) // saldo awal saat akun didaftarkan (rupiah)
+  color          String? // warna untuk UI, format hex (#RRGGBB)
+  icon           String? // nama ikon lucide-react, cth: "wallet", "landmark"
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+
+  transactions Transaction[] @relation("AccountTransactions")
+  transfersIn  Transaction[] @relation("TransferTargets")
+  debts        Debt[] // hutang yang dibayar / cair dari akun ini
+
+  @@index([type])
+}
+
+/// Kategori transaksi, dipisah per tipe (pemasukan vs pengeluaran).
+model Category {
+  id           String        @id @default(cuid())
+  name         String // "Makan & Minum", "Gaji", "Transportasi", dst.
+  type         String // INCOME | EXPENSE
+  color        String? // hex untuk UI
+  icon         String? // nama ikon lucide-react
+  isPreset     Boolean       @default(false) // true = kategori bawaan, tidak bisa dihapus user? (tetap bisa, hanya penanda)
+  createdAt    DateTime      @default(now())
+
+  transactions Transaction[]
+
+  @@unique([name, type])
+  @@index([type])
+}
+
+/// Satu catatan uang masuk / keluar / pindah antar akun.
+model Transaction {
+  id          String   @id @default(cuid())
+  type        String // INCOME | EXPENSE | TRANSFER
+  amount      Int // selalu positif, rupiah
+  date        DateTime @default(now())
+  note        String? // catatan bebas, cth: "makan siang warteg"
+  source      String   @default("MANUAL") // MANUAL | AI_SCAN
+  createdAt   DateTime @default(now())
+
+  account     Account  @relation("AccountTransactions", fields: [accountId], references: [id])
+  accountId   String
+  toAccount   Account? @relation("TransferTargets", fields: [toAccountId], references: [id])
+  toAccountId String? // hanya terisi untuk TRANSFER (akun tujuan)
+  category    Category? @relation(fields: [categoryId], references: [id])
+  categoryId  String?
+  receipt     ReceiptScan? // hasil scan struk yang jadi transaksi ini
+  debt        Debt? @relation("DebtTransactions", fields: [debtId], references: [id]) // terisi untuk DEBT_PAYMENT / DEBT_DISBURSEMENT
+  debtId      String?
+
+  @@index([accountId])
+  @@index([categoryId])
+  @@index([date])
+  @@index([type, date])
+}
+
+/// Hutang: uang yang LO pinjam (gue beri hutang ke user, cth: paylater, pinjaman
+/// kantor, pinjem temen). Pihak yang menghutang bukan user.
+/// Saldo hutang (payable) tidak memasuki saldo aset — nilainya terpisah dan
+/// dilunasi lewat transaksi DEBT_PAYMENT.
+model Debt {
+  id            String   @id @default(cuid())
+  name          String // "Paylater Shopee", "KPR Rumah", "Pinjem Budi"
+  creditorName  String? // nama pemberi hutang (opsional jika sudah jelas dari name)
+  initialAmount Int // total pokok hutang saat dicatat (rupiah, positif)
+  paidAmount    Int      @default(0) // cache pembayaran; selalu dihitung ulang dari transaksi
+  //     ^ catatan: paidAmount hanya denormalisasi untuk list cepat;
+  //       sumber kebenaran = sum(Transaction amount, type DEBT_PAYMENT).
+  dueDate       DateTime? // jatuh tempo (opsional)
+  interestInfo  String? // info bunga/cicilan bebas, cth: "bunga 2%/bulan"
+  accountId     String // akun tempat uang hasil DEBT_DISBURSEMENT diterima / akun sumber pembayaran
+  account       Account  @relation(fields: [accountId], references: [id])
+  status        String   @default("ACTIVE") // ACTIVE | SETTLED
+  note          String?
+  createdAt     DateTime @default(now())
+
+  transactions Transaction[] @relation("DebtTransactions")
+
+  @@index([status])
+  @@index([accountId])
+}
+
+/// Arsip hasil AI scan struk. Awalnya PENDING, setelah direview user
+/// jadi APPROVED (membentuk 1 Transaction EXPENSE) atau DISCARDED.
+model ReceiptScan {
+  id            String   @id @default(cuid())
+  imagePath     String? // path arsip foto struk (optional di Milestone 1)
+  status        String   @default("PENDING") // PENDING | APPROVED | DISCARDED
+  merchant      String? // nama toko dari hasil AI, cth "Indomaret"
+  parsedJson    String // hasil mentah AI (JSON: items, subtotal, tax, total, dst.)
+  confidence    Float? // keyakinan AI 0.0 - 1.0 (jika tersedia)
+  transactionId String?  @unique // terisi setelah transaksi dibuat dari scan ini
+  transaction   Transaction? @relation(fields: [transactionId], references: [id])
+  createdAt     DateTime @default(now())
+
+  @@index([status])
+}
