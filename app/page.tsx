@@ -5,7 +5,7 @@ import { currentMonthKey, monthRange, formatTanggal } from "@/lib/datetime";
 import { formatRupiah } from "@/lib/format";
 import { getIcon } from "@/lib/icons";
 import { QuickActions } from "@/components/quick-actions";
-import { ChevronRight, Scale, Tags, ScanLine, BarChart3 } from "lucide-react";
+import { ChevronRight, Scale, Tags, ScanLine, BarChart3, Settings } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -174,6 +174,18 @@ export default async function HomePage() {
           </div>
         </Link>
       </div>
+
+      <Link
+        href="/settings"
+        className="flex items-center gap-2.5 rounded-xl bg-card px-3.5 py-3 shadow-sm transition active:scale-[0.99]"
+      >
+        <Settings className="size-5 text-brand" />
+        <div className="flex-1">
+          <p className="text-sm font-semibold">Pengaturan</p>
+          <p className="text-[11px] text-muted">Model AI & mode demo</p>
+        </div>
+        <ChevronRight className="size-4 text-muted" />
+      </Link>
     </div>
   );
 }

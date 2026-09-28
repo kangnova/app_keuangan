@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { z } from "zod";
+import { getScanVisionModel, isScanMockMode } from "@/lib/settings";
 
 // ===== Skema hasil parse struk =====
 export const receiptItemSchema = z.object({
@@ -83,7 +84,8 @@ Aturan:
 
 /** Panggil vision model untuk mem-parsing foto struk (dataURL base64). */
 export async function parseReceiptImage(dataUrl: string): Promise<ReceiptParsed> {
-  const model = process.env.SUMOPOD_VISION_MODEL ?? "gpt-4o-mini";
+  // Model bisa dioverride dari halaman Pengaturan (DB), fallback ke env/default.
+  const { value: model } = await getScanVisionModel();
   const client = getClient();
 
   const completion = await client.chat.completions.create({
@@ -137,7 +139,7 @@ const MOCK_RECEIPT: ReceiptParsed = {
 };
 
 export async function parseReceipt(dataUrl: string): Promise<{ parsed: ReceiptParsed; mock: boolean }> {
-  if (process.env.SCAN_MOCK_MODE === "1") {
+  if (await isScanMockMode()) {
     // Sedikit variasi biar beberapa scan punya total berbeda
     const mock = { ...MOCK_RECEIPT, total: MOCK_RECEIPT.total };
     return { parsed: mock, mock: true };

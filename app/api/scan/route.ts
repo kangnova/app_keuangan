@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { handle, ok, badRequest, fail } from "@/lib/api";
 import { parseReceipt, receiptWarnings } from "@/lib/ai";
+import { isScanMockMode } from "@/lib/settings";
 
 export const maxDuration = 120;
 
@@ -8,8 +9,8 @@ const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4MB setelah kompres client
 
 export async function POST(req: Request) {
   return handle(async () => {
-    if (process.env.SCAN_MOCK_MODE !== "1" && !process.env.SUMOPOD_API_KEY) {
-      return fail(503, "Fitur scan belum dikonfigurasi: isi SUMOPOD_API_KEY di .env (dashboard Sumopod), atau set SCAN_MOCK_MODE=1 untuk demo.");
+    if (!(await isScanMockMode()) && !process.env.SUMOPOD_API_KEY) {
+      return fail(503, "Fitur scan belum dikonfigurasi: isi SUMOPOD_API_KEY di .env (dashboard Sumopod), atau aktifkan Mode Demo di halaman Pengaturan.");
     }
 
     let body: { image?: unknown };

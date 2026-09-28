@@ -115,3 +115,12 @@ model ReceiptScan {
 
   @@index([status])
 }
+
+/// Preferensi aplikasi (key-value). Dipakai agar pengaturan seperti model vision
+/// AI dan mode demo bisa diganti dari UI tanpa edit .env / redeploy.
+/// Nilai efektif = DB override, kalau tidak ada fallback ke env var.
+model AppSetting {
+  key       String   @id // cth: "scan_vision_model", "scan_mock_mode"
+  value     String
+  updatedAt DateTime @default(now()) @updatedAt
+}

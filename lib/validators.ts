@@ -150,3 +150,16 @@ export const scanConfirmSchema = z.object({
   date: dateInput, // override tanggal struk jika salah
   note: nullableString, // override catatan
 });
+
+// ===== Pengaturan aplikasi =====
+// null = hapus override di DB (kembali ke env/default); field tak dikirim = tidak diubah.
+export const settingsUpdateSchema = z
+  .object({
+    visionModel: z
+      .union([z.string().trim().regex(/^[a-zA-Z0-9._/-]{1,80}$/, "Nama model tidak valid"), z.literal(null)])
+      .optional(),
+    mockMode: z.boolean().nullable().optional(),
+  })
+  .refine((v) => v.visionModel !== undefined || v.mockMode !== undefined, {
+    message: "Kirim minimal satu pengaturan",
+  });

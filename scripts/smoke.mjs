@@ -335,6 +335,42 @@ assert([201, 400, 422].includes(r.status), `Gambar sampah ditangani baik (dapat 
 r = await req("POST", "/api/scan", { image: "data:text/plain;base64,SGVsbG8=" });
 assert(r.status === 400, "dataURL bukan gambar ditolak (400)");
 
+// ============ 8. PENGATURAN (MODEL & MOCK) ============
+console.log("\n=== 8. PENGATURAN ===");
+// Server jalan dengan SCAN_MOCK_MODE=1 (env). Override DB harus bisa menimpa env.
+
+r = await req("GET", "/api/settings");
+assert(r.status === 200, "GET /api/settings");
+assert(typeof r.json.data.apiKeySet === "boolean", "Status API key terkirim");
+assert(r.json.data.mock.enabled === true && r.json.data.mock.source === "env", `Mock aktif dari env (dapat: ${r.json.data.mock.enabled}/${r.json.data.mock.source})`);
+assert(Array.isArray(r.json.data.vision.options) && r.json.data.vision.options.length > 0, "Daftar model vision tersedia");
+const envModel = r.json.data.vision.value;
+
+// Ganti model dari UI (override DB)
+r = await req("PUT", "/api/settings", { visionModel: "gpt-4o" });
+assert(r.status === 200 && r.json.data.vision.value === "gpt-4o" && r.json.data.vision.source === "db", "PUT model vision -> override DB");
+
+// Matikan mock dari UI: DB "0" harus menimpa env SCAN_MOCK_MODE=1
+r = await req("PUT", "/api/settings", { mockMode: false });
+assert(r.status === 200 && r.json.data.mock.enabled === false && r.json.data.mock.source === "db", "PUT mockMode false -> DB menimpa env");
+
+// Persisten: GET ulang tetap nilai DB
+r = await req("GET", "/api/settings");
+assert(r.json.data.vision.value === "gpt-4o" && r.json.data.vision.overridden === true, "Model tersimpan (GET ulang)");
+assert(r.json.data.mock.enabled === false, "Mock tetap mati (GET ulang)");
+
+// Reset: kembali ke env
+r = await req("PUT", "/api/settings", { mockMode: null });
+assert(r.status === 200 && r.json.data.mock.enabled === true && r.json.data.mock.source === "env", "Reset mockMode -> fallback env");
+r = await req("PUT", "/api/settings", { visionModel: null });
+assert(r.status === 200 && r.json.data.vision.value === envModel, `Reset model -> kembali ke ${envModel}`);
+
+// Validasi input
+r = await req("PUT", "/api/settings", { visionModel: "model aneh!!" });
+assert(r.status === 400, "Nama model invalid ditolak (400)");
+r = await req("PUT", "/api/settings", {});
+assert(r.status === 400, "PUT tanpa field ditolak (400)");
+
 // ============ SELESAI ============
 console.log(`\n========================================`);
 console.log(`HASIL: ${passed} lulus, ${failures.length} gagal`);
