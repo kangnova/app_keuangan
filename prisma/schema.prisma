@@ -23,12 +23,15 @@ model Account {
   icon           String? // nama ikon lucide-react, cth: "wallet", "landmark"
   isActive       Boolean       @default(true)
   createdAt      DateTime      @default(now())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   transactions Transaction[] @relation("AccountTransactions")
   transfersIn  Transaction[] @relation("TransferTargets")
   debts        Debt[] // hutang yang dibayar / cair dari akun ini
 
   @@index([type])
+  @@index([userId])
 }
 
 /// Kategori transaksi, dipisah per tipe (pemasukan vs pengeluaran).
@@ -40,11 +43,14 @@ model Category {
   icon         String? // nama ikon lucide-react
   isPreset     Boolean       @default(false) // true = kategori bawaan, tidak bisa dihapus user? (tetap bisa, hanya penanda)
   createdAt    DateTime      @default(now())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   transactions Transaction[]
 
-  @@unique([name, type])
+  @@unique([name, type, userId])
   @@index([type])
+  @@index([userId])
 }
 
 /// Satu catatan uang masuk / keluar / pindah antar akun.
@@ -56,6 +62,8 @@ model Transaction {
   note        String? // catatan bebas, cth: "makan siang warteg"
   source      String   @default("MANUAL") // MANUAL | AI_SCAN
   createdAt   DateTime @default(now())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   account     Account  @relation("AccountTransactions", fields: [accountId], references: [id])
   accountId   String
@@ -71,6 +79,7 @@ model Transaction {
   @@index([categoryId])
   @@index([date])
   @@index([type, date])
+  @@index([userId])
 }
 
 /// Hutang: uang yang LO pinjam (gue beri hutang ke user, cth: paylater, pinjaman
@@ -92,11 +101,14 @@ model Debt {
   status        String   @default("ACTIVE") // ACTIVE | SETTLED
   note          String?
   createdAt     DateTime @default(now())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   transactions Transaction[] @relation("DebtTransactions")
 
   @@index([status])
   @@index([accountId])
+  @@index([userId])
 }
 
 /// Arsip hasil AI scan struk. Awalnya PENDING, setelah direview user
@@ -112,15 +124,62 @@ model ReceiptScan {
   transactionId String?  @unique // terisi setelah transaksi dibuat dari scan ini
   transaction   Transaction? @relation(fields: [transactionId], references: [id])
   createdAt     DateTime @default(now())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([status])
+  @@index([userId])
 }
 
 /// Preferensi aplikasi (key-value). Dipakai agar pengaturan seperti model vision
 /// AI dan mode demo bisa diganti dari UI tanpa edit .env / redeploy.
 /// Nilai efektif = DB override, kalau tidak ada fallback ke env var.
 model AppSetting {
-  key       String   @id // cth: "scan_vision_model", "scan_mock_mode"
+  key       String   // cth: "scan_vision_model", "scan_mock_mode"
   value     String
   updatedAt DateTime @default(now()) @updatedAt
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([key, userId])
+  @@index([userId])
+}
+
+/// Pengguna aplikasi
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  passwordHash      String
+  name              String?
+  role              String    @default("USER") // USER | ADMIN
+  plan              String    @default("TRIAL") // TRIAL | FREE | PRO
+  trialEndsAt       DateTime?
+  subscriptionEndsAt DateTime?
+  isDemo            Boolean   @default(false)
+  demoExpiresAt     DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  accounts          Account[]
+  categories        Category[]
+  transactions      Transaction[]
+  debts             Debt[]
+  receiptScans      ReceiptScan[]
+  settings          AppSetting[]
+  sessions          Session[]
+
+  @@index([email])
+  @@index([plan])
+}
+
+/// Session untuk Lucia Auth
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }

@@ -2,13 +2,19 @@ import { db } from "@/lib/db";
 import { handle, ok, badRequest, fail } from "@/lib/api";
 import { parseReceipt, receiptWarnings } from "@/lib/ai";
 import { isScanMockMode } from "@/lib/settings";
+import { getUserIdFromRequest } from "@/lib/api-auth";
 
 export const maxDuration = 120;
 
-const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4MB setelah kompres client
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 
 export async function POST(req: Request) {
   return handle(async () => {
+    const userId = await getUserIdFromRequest(req as any);
+    if (!userId) {
+      return fail(401, "Unauthorized");
+    }
+
     if (!(await isScanMockMode()) && !process.env.SUMOPOD_API_KEY) {
       return fail(503, "Fitur scan belum dikonfigurasi: isi SUMOPOD_API_KEY di .env (dashboard Sumopod), atau aktifkan Mode Demo di halaman Pengaturan.");
     }
@@ -23,7 +29,6 @@ export async function POST(req: Request) {
     if (typeof image !== "string" || !image.startsWith("data:image/")) {
       return badRequest("Kirim foto struk sebagai dataURL (data:image/...)");
     }
-    // ~ 1 char = 1 byte untuk base64 dataURL
     if (image.length > MAX_IMAGE_BYTES) {
       return badRequest("Foto terlalu besar (maks 4MB setelah kompres)");
     }
@@ -41,6 +46,7 @@ export async function POST(req: Request) {
 
     const scan = await db.receiptScan.create({
       data: {
+        userId,
         status: "PENDING",
         merchant: parsed.merchant,
         parsedJson: JSON.stringify(parsed),
@@ -60,9 +66,15 @@ export async function POST(req: Request) {
   });
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   return handle(async () => {
+    const userId = await getUserIdFromRequest(req as any);
+    if (!userId) {
+      return fail(401, "Unauthorized");
+    }
+
     const scans = await db.receiptScan.findMany({
+      where: { userId },
       orderBy: { createdAt: "desc" },
       take: 20,
       select: {

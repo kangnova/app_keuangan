@@ -28,19 +28,41 @@ const accounts = [
   { name: "GoPay", type: "EWALLET", initialBalance: 250_000, color: "#00aed6", icon: "smartphone" },
 ];
 
+async function getOrCreateDefaultUser() {
+  const defaultUserId = "clx_default_user_001";
+  let user = await prisma.user.findUnique({ where: { id: defaultUserId } });
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        id: defaultUserId,
+        email: "demo@duitku.local",
+        passwordHash: "$argon2id$v=19$m=19456,t=2,p=1$demo_salt_not_secure$demo_hash_not_secure",
+        name: "Demo User",
+        role: "USER",
+        plan: "TRIAL",
+      },
+    });
+    console.log("   ✅ Default user created");
+  }
+  return user;
+}
+
 async function main() {
+  const user = await getOrCreateDefaultUser();
+  console.log(`🌱 Seeding untuk user: ${user.email} (${user.id})`);
+
   console.log("🌱 Seeding kategori preset...");
   for (const c of expenseCategories) {
     await prisma.category.upsert({
-      where: { name_type: { name: c.name, type: "EXPENSE" } },
-      create: { ...c, type: "EXPENSE", isPreset: true },
+      where: { name_type_userId: { name: c.name, type: "EXPENSE", userId: user.id } },
+      create: { ...c, type: "EXPENSE", isPreset: true, userId: user.id },
       update: {},
     });
   }
   for (const c of incomeCategories) {
     await prisma.category.upsert({
-      where: { name_type: { name: c.name, type: "INCOME" } },
-      create: { ...c, type: "INCOME", isPreset: true },
+      where: { name_type_userId: { name: c.name, type: "INCOME", userId: user.id } },
+      create: { ...c, type: "INCOME", isPreset: true, userId: user.id },
       update: {},
     });
   }
@@ -48,9 +70,9 @@ async function main() {
 
   console.log("🌱 Seeding akun contoh...");
   for (const a of accounts) {
-    const existing = await prisma.account.findFirst({ where: { name: a.name } });
+    const existing = await prisma.account.findFirst({ where: { name: a.name, userId: user.id } });
     if (!existing) {
-      await prisma.account.create({ data: a });
+      await prisma.account.create({ data: { ...a, userId: user.id } });
       console.log(`   ➕ Akun baru: ${a.name}`);
     } else {
       console.log(`   ⏭️  Sudah ada: ${a.name}`);
@@ -58,8 +80,8 @@ async function main() {
   }
 
   const [totalAccounts, totalCategories] = await Promise.all([
-    prisma.account.count(),
-    prisma.category.count(),
+    prisma.account.count({ where: { userId: user.id } }),
+    prisma.category.count({ where: { userId: user.id } }),
   ]);
   console.log(`\n✨ Seed selesai. Total: ${totalAccounts} akun, ${totalCategories} kategori.`);
 }

@@ -8,12 +8,18 @@ import {
   resetSetting,
   VISION_MODEL_OPTIONS,
 } from "@/lib/settings";
+import { getUserIdFromRequest } from "@/lib/api-auth";
 
-export async function GET() {
+export async function GET(req: Request) {
   return handle(async () => {
+    const userId = await getUserIdFromRequest(req as any);
+    if (!userId) {
+      return { vision: { value: "gpt-4o-mini", source: "default", overridden: false, options: VISION_MODEL_OPTIONS }, mock: { enabled: false, source: "default" }, apiKeySet: !!process.env.SUMOPOD_API_KEY };
+    }
+
     const [vision, mock, apiKeySet] = await Promise.all([
-      getScanVisionModel(),
-      getScanMockMode(),
+      getScanVisionModel(userId),
+      getScanMockMode(userId),
       Promise.resolve(!!process.env.SUMOPOD_API_KEY),
     ]);
     return ok({
@@ -26,29 +32,37 @@ export async function GET() {
 
 export async function PUT(req: Request) {
   return handle(async () => {
+    const userId = await getUserIdFromRequest(req as any);
+    if (!userId) {
+      return fail(401, "Unauthorized");
+    }
+
     const body = await parseBody(req, settingsUpdateSchema);
 
     if (body.visionModel !== undefined) {
       if (body.visionModel === null) {
-        await resetSetting(SETTING_KEYS.scanVisionModel);
+        await resetSetting(SETTING_KEYS.scanVisionModel, userId);
       } else {
-        await setSetting(SETTING_KEYS.scanVisionModel, body.visionModel);
+        await setSetting(SETTING_KEYS.scanVisionModel, body.visionModel, userId);
       }
     }
 
     if (body.mockMode !== undefined) {
       if (body.mockMode === null) {
-        await resetSetting(SETTING_KEYS.scanMockMode);
+        await resetSetting(SETTING_KEYS.scanMockMode, userId);
       } else {
-        await setSetting(SETTING_KEYS.scanMockMode, body.mockMode ? "1" : "0");
+        await setSetting(SETTING_KEYS.scanMockMode, body.mockMode ? "1" : "0", userId);
       }
     }
 
-    // Balikin state efektif terbaru
-    const [vision, mock] = await Promise.all([getScanVisionModel(), getScanMockMode()]);
+    const [vision, mock] = await Promise.all([getScanVisionModel(userId), getScanMockMode(userId)]);
     return ok({
       vision: { value: vision.value, source: vision.source, overridden: vision.overridden },
       mock: { enabled: mock.enabled, source: mock.source },
     });
   });
+}
+
+function fail(status: number, message: string) {
+  return { status, message };
 }
