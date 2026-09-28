@@ -1,89 +1,98 @@
-# 💰 Duitku
+# 💰 Duitku — Personal Finance Tracker
 
-Aplikasi keuangan untuk pengeluaran harian, dan jumlah uang yang masih ada —
-dilengkapi **AI scan struk** (via [Sumopod AI Gateway](https://sumopod.com)) dan
-laporan harian/mingguan/bulanan/tahunan yang bisa di-export ke HTML/PDF/Excel.
+A full-featured personal finance application for tracking daily expenses, account balances, and generating periodic reports — powered by **AI receipt scanning** via [Sumopod AI Gateway](https://sumopod.com) with export to HTML/PDF/Excel.
 
-> 📋 Rencana lengkap aplikasi ada di [`RENCANA.md`](./RENCANA.md).
+> 📋 Full project roadmap available in [`RENCANA.md`](./RENCANA.md).
 
 ## Tech Stack
 
 - **Next.js 16** (App Router) + TypeScript + Tailwind CSS v4
-- **Prisma 6** + SQLite (siap migrasi ke PostgreSQL)
-- **Recharts** (grafik) · **ExcelJS** (export .xlsx) · **pdfmake 0.2** (export PDF)
-- **AI Scan Struk**: Sumopod AI Gateway (OpenAI-compatible, SDK `openai`)
+- **Prisma 6** + SQLite (production-ready for PostgreSQL migration)
+- **Recharts** (visualization) · **ExcelJS** (.xlsx export) · **pdfmake 0.2** (PDF export)
+- **AI Receipt Scan**: Sumopod AI Gateway (OpenAI-compatible, `openai` SDK)
 
-## Status Milestone
+## Milestone Status
 
-| Fase | Isi | Status |
-|------|-----|--------|
-| 1 | Fondasi: Next.js + TS + Prisma + schema DB + seed | ✅ |
-| 2 | CRUD Akun, Transaksi (income/expense/transfer), Kategori, **Pencatatan Hutang** | ✅ |
-| 3 | Dashboard + Laporan 4 periode + charts + **Export Excel/PDF/HTML** | ✅ |
-| 4 | AI Scan Struk via Sumopod + flow review | ✅ *(isi API key untuk aktif)* |
+| Phase | Scope | Status |
+|-------|-------|--------|
+| 1 | Foundation: Next.js + TS + Prisma + DB schema + seed | ✅ |
+| 2 | CRUD Accounts, Transactions (income/expense/transfer), Categories, **Debt Tracking** | ✅ |
+| 3 | Dashboard + 4-period Reports + charts + **Export Excel/PDF/HTML** | ✅ |
+| 4 | AI Receipt Scan via Sumopod + review flow | ✅ *(requires API key)* |
 | 5 | Export HTML / PDF / Excel | 🔜 |
-| 6 | PWA + passcode + polish UI | 🔜 |
-| 7 | Docker + deploy Sumopod Container | 🔜 |
+| 6 | PWA + passcode + UI polish | 🔜 |
+| 7 | Docker + Sumopod Container deploy | 🔜 |
 
-## Mulai Cepat
+## Quick Start
 
 ```bash
-# 1. Install dependencies (otomatis generate prisma client via postinstall)
+# 1. Install dependencies (auto-generates Prisma Client via postinstall)
 npm install
 
-# 2. Setup database (buat file prisma/dev.db + jalankan seed)
+# 2. Setup database (creates prisma/dev.db + runs seed)
 npx prisma migrate dev
 npm run db:seed
 
-# 3. Jalanin dev server
+# 3. Start dev server
 npm run dev
 ```
 
-Buka [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000).
 
-> 📷 **Aktifkan AI Scan Struk**: isi `SUMOPOD_API_KEY` di `.env` (dashboard Sumopod →
-> AI Models). Tanpa API key, set `SCAN_MOCK_MODE=1` untuk mencoba alur scan dengan
-> data demo.
+> 📷 **Enable AI Receipt Scan**: add `SUMOPOD_API_KEY` to `.env` (Sumopod dashboard → AI Models). Without an API key, set `SCAN_MOCK_MODE=1` to test the scan flow with mock data.
 
-### Command database
+### Database Commands
 
 ```bash
-npm run db:migrate   # buat/jalankan migrasi baru
-npm run db:seed      # isi kategori preset + akun contoh (idempoten)
-npm run db:studio    # buka Prisma Studio (GUI database)
+npm run db:migrate   # create/run new migrations
+npm run db:seed      # seed preset categories + sample accounts (idempotent)
+npm run db:studio    # open Prisma Studio (database GUI)
 ```
 
-### Smoke test API (82 assertion end-to-end)
+### Smoke Test API (82 end-to-end assertions)
 
 ```bash
 rm -f prisma/test.db && DATABASE_URL="file:./test.db" npx prisma migrate deploy
 DATABASE_URL="file:./test.db" npm run db:seed
-DATABASE_URL="file:./test.db" npx next start -p 3111 &   # di terminal terpisah
+DATABASE_URL="file:./test.db" npx next start -p 3111 &   # in separate terminal
 node scripts/smoke.mjs
 ```
 
-## Konvensi Penting
+## Key Architecture Decisions
 
-- 💵 **Semua nilai uang = integer rupiah** (tanpa desimal) — hindari bug pembulatan.
-- 🧮 **Saldo akun tidak disimpan**, selalu dihitung dari transaksi
-  (`initialBalance + income - expense ± transfer`) — tidak pernah melenceng.
-- 🤖 **AI tidak pernah langsung mengubah saldo** — semua hasil scan struk wajib
-  direview user sebelum jadi transaksi.
-- ⚖️ **Hutang dilacak terpisah** (`model Debt`) — cicilan hutang (`DEBT_PAYMENT`)
-  mengurangi saldo akun tapi **tidak dihitung sebagai pengeluaran harian**;
-  pencairan hutang (`DEBT_DISBURSEMENT`) menambah saldo tapi bukan pemasukan.
-  Sisa pokok = `initialAmount + Σ pencairan manual − Σ pembayaran`.
-  Hutang baru dengan `moneyReceived: true` otomatis membuat transaksi cair
-  `source: "DEBT_OPENING"` (naikkan saldo, tidak dobel di pokok).
-- 🧪 **PATCH API bersifat parsial** — field yang tidak dikirim tidak pernah berubah.
+- 💵 **All monetary values = integer rupiah** (no decimals) — eliminates rounding bugs.
+- 🧮 **Account balances are never stored** — always computed from transactions
+  (`initialBalance + income - expense ± transfer`) — zero drift guarantee.
+- 🤖 **AI never mutates balances directly** — all scanned receipts require user review before becoming transactions.
+- ⚖️ **Debt tracked separately** (`Debt` model) — debt payments (`DEBT_PAYMENT`) reduce account balance but **exclude from daily expenses**; disbursements (`DEBT_DISBURSEMENT`) increase balance but aren't income. Remaining principal = `initialAmount + Σ manual disbursements − Σ payments`. New debt with `moneyReceived: true` auto-creates `source: "DEBT_OPENING"` transaction (increases balance, no double-count in principal).
+- 🧪 **PATCH APIs are partial** — omitted fields never change.
 
 ## Environment Variables
 
-Lihat `.env.example`. Untuk fitur AI (Milestone 4) nanti dibutuhkan:
+See `.env.example`. For AI features (Milestone 4):
 
 ```env
-SUMOPOD_API_KEY="sk-... dari dashboard sumopod"
+SUMOPOD_API_KEY="sk-... from sumopod dashboard"
 SUMOPOD_BASE_URL="https://ai.sumopod.com/v1"
-SUMOPOD_VISION_MODEL="gpt-4o-mini"   # atau gpt-4o / gemini-2.5-flash
-SCAN_MOCK_MODE="0"                    # 1 = demo tanpa panggil AI (untuk tes UI)
+SUMOPOD_VISION_MODEL="gpt-4o-mini"   # or gpt-4o / gemini-2.5-flash
+SCAN_MOCK_MODE="0"                    # 1 = demo without AI calls (UI testing)
 ```
+
+---
+
+## Why This Project Matters
+
+**Duitku** demonstrates production-grade full-stack engineering:
+
+- **Type-safe end-to-end**: TypeScript + Prisma + Zod validation
+- **AI integration**: Real-world LLM vision model usage with fallback/mock modes
+- **Financial correctness**: Integer-only arithmetic, computed balances, audit trails
+- **Testing discipline**: 82-assertion smoke test covering auth, CRUD, reports, exports
+- **Deploy-ready**: Docker-friendly, PostgreSQL migration path, env-driven config
+- **Modern stack**: Next.js 16 App Router, Tailwind v4, Prisma 6
+
+Built to showcase skills relevant for **remote Full Stack / Backend roles** — clean architecture, financial domain modeling, AI integration, and testable code.
+
+---
+
+*Open to remote opportunities. Let's connect: [LinkedIn](https://linkedin.com) • [GitHub](https://github.com)*
