@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Paket berat berbasis Node (fs/stream) agar tidak di-bundle untuk client/server components
+  serverExternalPackages: ["exceljs", "pdfmake", "@prisma/client"],
 };
 
 export default nextConfig;

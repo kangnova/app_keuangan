@@ -221,7 +221,7 @@ prisma/
 |------|-----|-------|
 | **1** | Init Next.js + TS + Tailwind + Prisma, schema DB, seed kategori & akun contoh | Fondasi jalan |
 | **2** | CRUD Akun + saldo, CRUD Transaksi (income/expense/transfer), Kategori, **Pencatatan Hutang** | Inti pencatatan ✅ **SELESAI** |
-| **3** | Dashboard + Laporan (harian/mingguan/bulanan/tahunan) + charts | Analitik ✅ |
+| **3** | Dashboard + Laporan (harian/mingguan/bulanan/tahunan) + charts | Analitik ✅ **SELESAI** |
 | **4** | AI Scan Struk via Sumopod + flow review & approve | Fitur bintang ⭐ |
 | **5** | Export HTML / PDF / Excel dari laporan | Pelaporan ✅ |
 | **6** | PWA (installable, kamera), passcode, polish UI | Siap pakai ✅ |
@@ -299,7 +299,57 @@ notifikasi pengeluaran harian melebihi rata-rata, multi-perangkat dengan Postgre
 > ✅ **Milestone 2 SELESAI** — 10 API route + 6 halaman + 60 smoke test lulus.
 > (+) Keterangan transaksi wajib untuk pemasukan & pengeluaran generik.
 >
-> 📌 *Detail teknis milestone berikutnya (M3 dst.) akan ditambahkan ke dokumen ini
+---
+
+## 7.2 Detail Teknis Milestone 3 — Laporan & Analitik
+
+**Resolusi periode** (dipilih via tab, navigasi panah untuk geser periode):
+
+| Periode | Parameter | Rentang |
+|---------|-----------|---------|
+| Harian | `date=YYYY-MM-DD` | 1 hari kalender |
+| Mingguan | `week=YYYY-Www` | Senin–Minggu (ISO) |
+| Bulanan | `month=YYYY-MM` | 1 hari terakhir bulan |
+| Tahunan | `year=YYYY` | 1 Jan–31 Des |
+
+**Isi laporan** (`GET /api/reports?period=month&key=2026-09` → JSON):
+1. **Ringkasan**: pemasukan, pengeluaran, surplus/defisit, rata-rata pengeluaran/hari
+   (jumlah hari dengan transaksi keluar), total cicilan hutang (dipisah, bukan pengeluaran),
+   jumlah transaksi.
+2. **Per kategori** (expense & income terpisah): total, persentase, jumlah transaksi → donut chart.
+3. **Tren**: time-series sesuai resolusi (per jam→hari untuk daily, per hari untuk
+   week/month, per bulan untuk year) → bar chart.
+4. **Top 10 pengeluaran** & **sumber pemasukan** (agregasi per catatan/kategori).
+5. Saldo akhir semua akun aktif + total sisa hutang berjalan (snapshot kondisi).
+
+**Aturan agregat yang sama dengan saldo:** hanya `INCOME`/`EXPENSE` yang masuk
+pemasukan/pengeluaran; `DEBT_*` dan `TRANSFER` dilaporkan terpisah (butir khusus).
+
+**Export** (`GET /api/export?format=xlsx|pdf|html&period=...&key=...`):
+- **Excel** (ExcelJS, mime `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`):
+  sheet 1 Ringkasan, sheet 2 Per Kategori, sheet 3 Transaksi (detail lengkap).
+- **PDF** (pdfmake + @types/pdfmake): layout laporan siap cetak (ringkasan, tabel
+  kategori, top pengeluaran) — font standar, file langsung ter-download.
+- **HTML**: halaman `/reports/print?period=...&key=...` dengan print CSS —
+  tombol "Cetak / Simpan PDF" memanggil `window.print()` (print-to-PDF browser).
+
+**UI** `/reports`: tab 4 periode + panah navigasi, kartu ringkasan, donut kategori
+(Recharts), bar tren, daftar top pengeluaran & sumber pemasukan, tombol Export
+(Excel/PDF/HTML) — semua memanggil endpoint di atas dengan periode aktif.
+
+**Kriteria selesai M3:**
+1. Laporan keempat periode akurat terhadap data transaksi (diverifikasi smoke test).
+2. Cicilan hutang tidak masuk agregat pengeluaran, muncul di butir terpisah.
+3. Export Excel ter-download sebagai file .xlsx valid (zip PK), PDF berawalan %PDF,
+   HTML print-layout siap cetak.
+4. Smoke test diperluas untuk /api/reports & /api/export; `tsc` + build bersih.
+
+> ✅ **Milestone 3 SELESAI** — 22 assertion laporan/export baru (total 82 smoke test lulus).
+> Catatan implementasi: **pdfmake di-pin ke 0.2.10** (0.3.x menggantung di Node),
+> vfs diambil dari `vfs_fonts.pdfMake.vfs`, `getBuffer` dengan timeout 20s;
+> exceljs/pdfmake/prisma didaftarkan di `serverExternalPackages`.
+
+> 📌 *Detail teknis milestone berikutnya (M4 dst.) akan ditambahkan ke dokumen ini
 > di awal pengerjaan tiap milestone, mengikuti pola yang sama.*
 
 ---

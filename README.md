@@ -10,6 +10,7 @@ laporan harian/mingguan/bulanan/tahunan yang bisa di-export ke HTML/PDF/Excel.
 
 - **Next.js 16** (App Router) + TypeScript + Tailwind CSS v4
 - **Prisma 6** + SQLite (siap migrasi ke PostgreSQL)
+- **Recharts** (grafik) · **ExcelJS** (export .xlsx) · **pdfmake 0.2** (export PDF)
 - AI: Sumopod AI Gateway (OpenAI-compatible) — *datang di Milestone 4*
 
 ## Status Milestone
@@ -18,7 +19,7 @@ laporan harian/mingguan/bulanan/tahunan yang bisa di-export ke HTML/PDF/Excel.
 |------|-----|--------|
 | 1 | Fondasi: Next.js + TS + Prisma + schema DB + seed | ✅ |
 | 2 | CRUD Akun, Transaksi (income/expense/transfer), Kategori, **Pencatatan Hutang** | ✅ |
-| 3 | Dashboard + Laporan 4 periode + charts | 🔜 |
+| 3 | Dashboard + Laporan 4 periode + charts + **Export Excel/PDF/HTML** | ✅ |
 | 4 | AI Scan Struk via Sumopod + flow review | 🔜 |
 | 5 | Export HTML / PDF / Excel | 🔜 |
 | 6 | PWA + passcode + polish UI | 🔜 |
@@ -48,7 +49,7 @@ npm run db:seed      # isi kategori preset + akun contoh (idempoten)
 npm run db:studio    # buka Prisma Studio (GUI database)
 ```
 
-### Smoke test API (52 assertion end-to-end)
+### Smoke test API (82 assertion end-to-end)
 
 ```bash
 rm -f prisma/test.db && DATABASE_URL="file:./test.db" npx prisma migrate deploy

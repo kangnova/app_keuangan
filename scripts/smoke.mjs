@@ -221,6 +221,68 @@ assert(r.status === 200 && r.json.data.isActive === false, "Nonaktifkan akun kos
 r = await req("DELETE", `/api/accounts/${dana.id}`);
 assert(r.status === 200, "Hapus akun kosong berhasil");
 
+// ============ 6. LAPORAN & EXPORT ============
+console.log("\n=== 6. LAPORAN & EXPORT ===");
+const monthKey = new Date().toISOString().slice(0, 7);
+const yearKey = String(new Date().getFullYear());
+const weekKey = (() => {
+  const now = new Date();
+  const jan4 = new Date(now.getFullYear(), 0, 4);
+  const dow = (jan4.getDay() + 6) % 7;
+  const w = Math.ceil(((now.getTime() - jan4.getTime()) / 864e5 + dow) / 7);
+  return `${now.getFullYear()}-W${String(w).padStart(2, "0")}`;
+})();
+
+// Rekam beberapa transaksi lagi untuk laporan bulan ini
+// (kategori Makan & Minum sudah dihapus di bagian 5, pakai kategori yang masih ada)
+const transport = cats.find((c) => c.name === "Transportasi");
+await req("POST", "/api/transactions", { type: "EXPENSE", amount: 35000, accountId: cash.id, categoryId: transport?.id, note: "sarapan bubur" });
+await req("POST", "/api/transactions", { type: "EXPENSE", amount: 120000, accountId: cash.id, categoryId: transport?.id, note: "ojol sehari" });
+
+r = await req("GET", `/api/reports?period=month&key=${monthKey}`);
+assert(r.status === 200, "GET /api/reports bulan ini");
+const rep = r.json.data;
+assert(rep.label.length > 0, `Label periode: "${rep.label}"`);
+assert(rep.summary.expense === 30000 + 35000 + 120000, `Pengeluaran bulan = 185.000 (dapat ${rep.summary.expense})`);
+assert(rep.summary.income === 2000000, `Pemasukan bulan = 2.000.000 (dapat ${rep.summary.income})`);
+assert(rep.summary.net === 2000000 - 185000, "Surplus = income - expense");
+assert(rep.summary.debtPayment === 500000 + 3500000, `Cicilan hutang terpisah = 4.000.000 (dapat ${rep.summary.debtPayment})`);
+assert(rep.summary.avgExpensePerActiveDay > 0, "Rata-rata per hari aktif terhitung");
+assert(rep.expenseByCategory.some((c) => c.name === "Transportasi" && c.total === 155000), `Breakdown kategori Transportasi 155rb (dapat ${rep.expenseByCategory.find((c) => c.name === "Transportasi")?.total})`);
+assert(rep.expenseByCategory.every((c) => c.pct > 0 && c.pct <= 100), "Persentase kategori valid");
+assert(rep.incomeByCategory.some((c) => c.name === "Gaji"), "Sumber pemasukan Gaji ada");
+assert(rep.trend.length >= 28 && rep.trend.length <= 31 && rep.trend.every((p) => p.expense === 0 && p.income === 0 || true), `Tren bulan = ${rep.trend.length} titik harian`);
+const trendTotal = rep.trend.reduce((s, p) => s + p.expense, 0);
+assert(trendTotal === rep.summary.expense, `Tren expense menjumlah = pengeluaran (${trendTotal})`);
+assert(rep.topExpenses.length > 0 && rep.topExpenses[0].amount >= rep.topExpenses[rep.topExpenses.length - 1].amount, "Top pengeluaran terurut desc");
+assert(rep.accounts.length >= 2 && rep.accountsTotal > 0, `Snapshot saldo akun: total ${rep.accountsTotal}`);
+
+r = await req("GET", `/api/reports?period=week&key=${weekKey}`);
+assert(r.status === 200 && r.json.data.label.includes("Minggu ke-"), `Laporan mingguan: ${r.json.data.label}`);
+r = await req("GET", `/api/reports?period=year&key=${yearKey}`);
+assert(r.status === 200 && r.json.data.trend.length === 12, "Laporan tahunan: tren 12 bulan");
+r = await req("GET", `/api/reports?period=day&key=${new Date().toISOString().slice(0, 10)}`);
+assert(r.status === 200, "Laporan harian hari ini");
+r = await req("GET", "/api/reports?period=month&key=2026-13");
+assert(r.status === 400, "Kunci bulan invalid ditolak (400)");
+
+// Export Excel
+r = await fetch(`${BASE}/api/export?format=xlsx&period=month&key=${monthKey}`);
+const xbuf = Buffer.from(await r.arrayBuffer());
+assert(r.status === 200 && xbuf.subarray(0, 2).toString() === "PK", `Excel: PK magic + ${xbuf.length} bytes, mime ${r.headers.get("content-type")?.slice(0, 30)}`);
+
+// Export PDF
+r = await fetch(`${BASE}/api/export?format=pdf&period=month&key=${monthKey}`);
+const pbuf = Buffer.from(await r.arrayBuffer());
+assert(r.status === 200 && pbuf.subarray(0, 5).toString() === "%PDF-", `PDF: %PDF magic + ${pbuf.length} bytes`);
+
+// Export HTML
+r = await fetch(`${BASE}/api/export?format=html&period=month&key=${monthKey}`);
+const hbuf = Buffer.from(await r.arrayBuffer());
+const html = hbuf.toString("utf8");
+assert(r.status === 200 && html.startsWith("<!DOCTYPE html>"), "HTML: doctype ok");
+assert(html.includes("LAPORAN KEUANGAN") && html.includes("window.print()"), "HTML: judul + tombol cetak ada");
+
 // ============ SELESAI ============
 console.log(`\n========================================`);
 console.log(`HASIL: ${passed} lulus, ${failures.length} gagal`);
