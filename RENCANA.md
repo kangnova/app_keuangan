@@ -270,6 +270,11 @@ notifikasi pengeluaran harian melebihi rata-rata, multi-perangkat dengan Postgre
   Pencairan manual berikutnya (top-up) TETAP menambah pokok.
 - PATCH bersifat parsial: field yang tidak dikirim tidak boleh berubah
   (transform Zod hanya "" → null, undefined tetap undefined).
+- **Keterangan transaksi (catatan):** pemasukan SELALU wajib catatan asal uang
+  ("gaji dari PT Maju", "hadiah dari Budi"); pengeluaran wajib catatan keperluan
+  jika tanpa kategori atau ke kategori generik ("Lain-lain"); transfer opsional.
+  Ditegakkan di API (`noteRequiredError`) dan diarahkan UI lewat placeholder
+  dinamis per kategori — supaya riwayat & laporan sumber pendapatan selalu jelas.
 - Input nominal di UI pakai format ribuan ("15.000") → disimpan sebagai integer rupiah.
 
 **UI (mobile-first, bottom navigation):**
@@ -289,9 +294,10 @@ notifikasi pengeluaran harian melebihi rata-rata, multi-perangkat dengan Postgre
 5. Bisa catat hutang, cairkan, dan bayar cicilan → sisa pokok & status ter-update,
    saldo akun berubah dengan benar, laporan pengeluaran tidak terkotorkan.
 6. `tsc --noEmit` bersih, `npm run build` sukses, dan smoke test end-to-end
-   `node scripts/smoke.mjs` lulus semua (52 assertion).
+   `node scripts/smoke.mjs` lulus semua (60 assertion).
 
-> ✅ **Milestone 2 SELESAI** — 10 API route + 6 halaman + 52 smoke test lulus.
+> ✅ **Milestone 2 SELESAI** — 10 API route + 6 halaman + 60 smoke test lulus.
+> (+) Keterangan transaksi wajib untuk pemasukan & pengeluaran generik.
 >
 > 📌 *Detail teknis milestone berikutnya (M3 dst.) akan ditambahkan ke dokumen ini
 > di awal pengerjaan tiap milestone, mengikuti pola yang sama.*

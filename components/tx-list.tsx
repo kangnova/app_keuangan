@@ -240,11 +240,11 @@ function TxRowCard({ tx, onEdit, onDelete }: { tx: TxRow; onEdit: () => void; on
     tx.debt?.name ||
     ({ INCOME: "Pemasukan", EXPENSE: "Pengeluaran", TRANSFER: "Transfer", DEBT_PAYMENT: "Cicilan Hutang", DEBT_DISBURSEMENT: "Cair Hutang" }[tx.type] ?? tx.type);
 
-  const subtitle = tx.type === "TRANSFER"
-    ? `${tx.account.name} → ${tx.toAccount?.name}`
-    : tx.debt && tx.type === "DEBT_PAYMENT"
-      ? `${tx.account.name} · ${tx.debt.name}`
-      : tx.account.name;
+  // Riwayat: tampilkan kategori + akun supaya sumber/tujuan uang selalu jelas
+  const subtitle =
+    tx.type === "TRANSFER"
+      ? `${tx.account.name} → ${tx.toAccount?.name}`
+      : [tx.category?.name ?? tx.debt?.name ?? null, tx.account.name].filter(Boolean).join(" · ");
 
   return (
     <div className="group flex items-center gap-3 rounded-xl bg-card p-3 shadow-sm">

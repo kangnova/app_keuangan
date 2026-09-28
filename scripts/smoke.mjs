@@ -89,6 +89,25 @@ assert(r.status === 400, "Kategori INCOME untuk EXPENSE ditolak (400)");
 r = await req("POST", "/api/transactions", { type: "EXPENSE", amount: -5, accountId: cash.id });
 assert(r.status === 400, "Nominal minus ditolak (400)");
 
+// Aturan catatan keterangan
+const lainnya = cats.find((c) => c.name === "Lain-lain");
+r = await req("POST", "/api/transactions", { type: "INCOME", amount: 50000, accountId: cash.id });
+assert(r.status === 400, "Pemasukan tanpa catatan ditolak (400)");
+r = await req("POST", "/api/transactions", { type: "INCOME", amount: 50000, accountId: cash.id, categoryId: gaji.id });
+assert(r.status === 400, "Pemasukan kategori Gaji tanpa catatan ditolak (400)");
+r = await req("POST", "/api/transactions", { type: "INCOME", amount: 50000, accountId: cash.id, categoryId: gaji.id, note: "gaji dari PT Maju" });
+assert(r.status === 201, "Pemasukan dengan catatan asal uang (201)");
+r = await req("DELETE", `/api/transactions/${r.json.data.id}`);
+assert(r.status === 200, "Cleanup transaksi uji catatan");
+r = await req("POST", "/api/transactions", { type: "EXPENSE", amount: 12000, accountId: cash.id, categoryId: lainnya.id });
+assert(r.status === 400, "Pengeluaran kategori Lain-lain tanpa catatan ditolak (400)");
+r = await req("POST", "/api/transactions", { type: "EXPENSE", amount: 12000, accountId: cash.id });
+assert(r.status === 400, "Pengeluaran tanpa kategori & tanpa catatan ditolak (400)");
+r = await req("POST", "/api/transactions", { type: "EXPENSE", amount: 12000, accountId: cash.id, categoryId: lainnya.id, note: "beli obat flu" });
+assert(r.status === 201, "Pengeluaran Lain-lain dengan catatan keperluan (201)");
+r = await req("DELETE", `/api/transactions/${r.json.data.id}`);
+assert(r.status === 200, "Cleanup transaksi lain-lain");
+
 r = await req("GET", "/api/accounts");
 const cashAfter = r.json.data.accounts.find((a) => a.id === cash.id);
 const bcaAfter = r.json.data.accounts.find((a) => a.id === bca.id);

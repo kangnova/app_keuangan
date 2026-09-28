@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { handle, ok, badRequest, parseBody } from "@/lib/api";
-import { transactionCreateSchema } from "@/lib/validators";
+import { transactionCreateSchema, noteRequiredError } from "@/lib/validators";
 import { currentMonthKey, monthRange } from "@/lib/datetime";
 
 export async function GET(req: Request) {
@@ -49,6 +49,8 @@ export async function POST(req: Request) {
     if (category && category.type === "EXPENSE" && input.type === "INCOME") {
       return badRequest("Kategori pengeluaran tidak bisa dipakai untuk pemasukan");
     }
+    const noteError = noteRequiredError(input.type, category?.name ?? null, input.note);
+    if (noteError) return badRequest(noteError);
 
     const transaction = await db.transaction.create({
       data: {

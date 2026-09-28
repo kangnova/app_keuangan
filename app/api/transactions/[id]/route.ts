@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { handle, ok, notFound, badRequest, parseBody } from "@/lib/api";
-import { transactionUpdateSchema } from "@/lib/validators";
+import { transactionUpdateSchema, noteRequiredError } from "@/lib/validators";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -30,6 +30,18 @@ export async function PATCH(req: Request, { params }: Ctx) {
     }
     if (data.categoryId && (existing.type === "TRANSFER" || existing.type.startsWith("DEBT_"))) {
       return badRequest("Transaksi hutang/transfer tidak pakai kategori");
+    }
+    // Aturan catatan dicek saat create, atau saat PATCH menyentuh note/kategori
+    if (input.note !== undefined || input.categoryId !== undefined) {
+      const effCategoryId = (data.categoryId as string | null | undefined) ?? existing.categoryId;
+      const effNote = (data.note as string | null | undefined) ?? existing.note;
+      let catName: string | null = null;
+      if (effCategoryId) {
+        const c = await db.category.findUnique({ where: { id: effCategoryId }, select: { name: true } });
+        catName = c?.name ?? null;
+      }
+      const noteError = noteRequiredError(existing.type, catName, effNote);
+      if (noteError) return badRequest(noteError);
     }
 
     const transaction = await db.transaction.update({

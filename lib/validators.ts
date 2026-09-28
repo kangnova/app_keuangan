@@ -120,3 +120,25 @@ export const debtActionSchema = z.object({
 });
 
 export type TransactionCreateInput = z.infer<typeof transactionCreateSchema>;
+
+/**
+ * Aturan catatan keterangan transaksi:
+ * - Pemasukan SELALU wajib catatan (dari mana uangnya).
+ * - Pengeluaran wajib catatan jika tanpa kategori atau kategori generik ("Lain-lain" dll).
+ * - Transfer opsional.
+ * Return pesan error, atau null jika lolos.
+ */
+export function noteRequiredError(
+  type: string,
+  categoryName: string | null | undefined,
+  note: string | null | undefined,
+): string | null {
+  const hasNote = !!note?.trim();
+  if (type === "INCOME" && !hasNote) {
+    return "Catatan wajib untuk pemasukan: uang ini dari mana?";
+  }
+  if (type === "EXPENSE" && !hasNote && (!categoryName || /lain/i.test(categoryName))) {
+    return "Catatan wajib: pengeluaran ini dipakai untuk apa?";
+  }
+  return null;
+}

@@ -22,6 +22,20 @@ const TYPE_TABS = [
   { value: "TRANSFER", label: "Transfer", tone: "blue" },
 ] as const;
 
+/** Placeholder catatan yang menyesuaikan kategori, biar user tahu apa yang harus ditulis. */
+function notePlaceholder(catName: string | undefined, type: string): string {
+  if (type === "INCOME") {
+    if (!catName || /lain/i.test(catName)) return "wajib: dari mana uangnya? cth: titipan jualan";
+    if (/gaji/i.test(catName)) return "wajib: gaji dari kerja yang mana? cth: PT Maju / warung";
+    if (/bonus/i.test(catName)) return "wajib: bonus apa? cth: bonus proyek klien A";
+    if (/hadiah/i.test(catName)) return "wajib: hadiah dari siapa? cth: dari Budi";
+    if (/usaha/i.test(catName)) return "wajib: dari mana? cth: untung jualan online";
+    return "wajib: asal uangnya, cth: dari klien A";
+  }
+  if (!catName || /lain/i.test(catName)) return "wajib: dipakai untuk apa? cth: beli obat, ongkir";
+  return "cth: makan siang warteg / bayar parkir";
+}
+
 export function TxForm({
   open,
   onClose,
@@ -77,10 +91,26 @@ export function TxForm({
     [categories, type],
   );
 
+  const selectedCat =
+    catOptions.find((c) => c.id === categoryId) ??
+    (mode.kind === "edit" ? categories.find((c) => c.id === mode.tx.categoryId) : undefined);
+  // Pemasukan selalu wajib catatan asal uang; pengeluaran wajib jika tanpa kategori
+  // atau ke kategori generik seperti "Lain-lain".
+  const noteRequired =
+    type === "INCOME" ||
+    (type === "EXPENSE" && (!categoryId || /lain/i.test(selectedCat?.name ?? "")));
+
   async function submit() {
     if (!amount) return toast.error("Isi nominal dulu");
     if (!accountId) return toast.error("Pilih akun dulu");
     if (type === "TRANSFER" && !toAccountId) return toast.error("Pilih akun tujuan");
+    if (noteRequired && !note.trim()) {
+      return toast.error(
+        type === "INCOME"
+          ? "Catatan wajib: uang masuk ini dari mana?"
+          : "Catatan wajib: pengeluaran ini dipakai untuk apa?",
+      );
+    }
     setSaving(true);
     try {
       const payload = {
@@ -185,20 +215,25 @@ export function TxForm({
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label>Tanggal</Label>
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          </div>
-          <div>
-            <Label>Catatan</Label>
-            <Input
-              placeholder="cth: makan siang"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              maxLength={120}
-            />
-          </div>
+        <div>
+          <Label required={noteRequired}>
+            Catatan {type === "INCOME" ? "(asal uang)" : type === "TRANSFER" ? "(opsional)" : "(keperluan)"}
+          </Label>
+          <Textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder={notePlaceholder(selectedCat?.name, type)}
+            maxLength={160}
+          />
+          <p className="mt-1 text-[11px] leading-relaxed text-muted">
+            Contoh: "gaji dari PT Maju", "hadiah dari Budi", "beli obat flu" — biar riwayat
+            &amp; laporan keuangan lo gampang dibaca.
+          </p>
+        </div>
+
+        <div>
+          <Label>Tanggal</Label>
+          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
 
         <Button onClick={submit} loading={saving} size="lg" className="mt-1 w-full">
