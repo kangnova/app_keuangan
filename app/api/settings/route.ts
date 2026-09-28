@@ -9,13 +9,16 @@ import {
   VISION_MODEL_OPTIONS,
 } from "@/lib/settings";
 import { getUserIdFromRequest } from "@/lib/api-auth";
+import { validateRequest } from "@/lib/auth";
 
 export async function GET(req: Request) {
   return handle(async () => {
-    const userId = await getUserIdFromRequest(req as any);
-    if (!userId) {
-      return ok({ vision: { value: "gpt-4o-mini", source: "default", overridden: false, options: VISION_MODEL_OPTIONS }, mock: { enabled: false, source: "default" }, apiKeySet: !!process.env.SUMOPOD_API_KEY });
+    const { user } = await validateRequest();
+    if (!user || user.role !== "ADMIN") {
+      return fail(403, "Akses ditolak. Pengaturan hanya untuk Administrator.");
     }
+
+    const userId = user.id;
 
     const [vision, mock, apiKeySet] = await Promise.all([
       getScanVisionModel(userId),
@@ -32,10 +35,12 @@ export async function GET(req: Request) {
 
 export async function PUT(req: Request) {
   return handle(async () => {
-    const userId = await getUserIdFromRequest(req as any);
-    if (!userId) {
-      return fail(401, "Unauthorized");
+    const { user } = await validateRequest();
+    if (!user || user.role !== "ADMIN") {
+      return fail(403, "Akses ditolak. Pengaturan hanya untuk Administrator.");
     }
+
+    const userId = user.id;
 
     const body = await parseBody(req, settingsUpdateSchema);
 

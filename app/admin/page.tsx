@@ -22,6 +22,7 @@ import {
   X,
   Receipt,
   ArrowLeftRight,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -181,12 +182,17 @@ export default function AdminPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Link href="/settings">
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+              <Settings className="size-3.5" /> Pengaturan AI & Sistem
+            </Button>
+          </Link>
           <Button
             variant="outline"
             size="sm"
             onClick={fetchUsers}
             disabled={loading}
-            className="gap-1.5"
+            className="gap-1.5 text-xs"
           >
             <RefreshCw className={`size-3.5 ${loading ? "animate-spin" : ""}`} />
             Segarkan

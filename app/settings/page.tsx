@@ -1,11 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
-import { KeyRound, BrainCircuit, FlaskConical, RotateCcw, Loader2 } from "lucide-react";
+import { KeyRound, BrainCircuit, FlaskConical, RotateCcw, Loader2, ArrowLeft, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/client";
+import { useAuth } from "@/lib/auth-hooks";
 
 type SettingSource = "db" | "env" | "default";
 
@@ -24,6 +27,9 @@ const SOURCE_LABEL: Record<SettingSource, string> = {
 };
 
 export default function SettingsPage() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+
   const [data, setData] = useState<SettingsPayload | null>(null);
   const [visionModel, setVisionModel] = useState("");
   const [mockEnabled, setMockEnabled] = useState(false);
@@ -41,8 +47,15 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (!authLoading) {
+      if (!user || user.role !== "ADMIN") {
+        toast.error("Halaman ini hanya dapat diakses oleh Administrator");
+        router.push("/");
+        return;
+      }
+      load();
+    }
+  }, [user, authLoading, load, router]);
 
   async function save(next: { visionModel?: string; mockMode?: boolean }) {
     setSaving(true);
@@ -76,8 +89,25 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-lg font-bold">Pengaturan</h1>
+    <div className="flex flex-col gap-4 max-w-xl mx-auto pb-16">
+      <div>
+        <div className="flex items-center gap-2 mb-1.5">
+          <Link
+            href="/admin"
+            className="inline-flex items-center gap-1 text-xs text-muted hover:text-foreground font-medium transition"
+          >
+            <ArrowLeft className="size-3.5" /> Kembali ke Panel Admin
+          </Link>
+          <span className="text-muted">•</span>
+          <span className="inline-flex items-center gap-1 rounded bg-purple-500/10 px-2 py-0.5 text-[10px] font-bold text-purple-600 dark:text-purple-400">
+            <Shield className="size-3" /> KHUSUS ADMINISTRATOR
+          </span>
+        </div>
+        <h1 className="text-xl font-bold">Pengaturan AI & Sistem</h1>
+        <p className="text-xs text-muted mt-0.5">
+          Konfigurasi model kecerdasan buatan (Vision) dan mode pengujian server.
+        </p>
+      </div>
 
       {/* Status API key */}
       <div className="flex items-center gap-3 rounded-xl bg-card p-3.5 shadow-sm">

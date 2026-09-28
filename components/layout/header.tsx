@@ -131,21 +131,23 @@ export function Header() {
                       </div>
                     </div>
                     {user.role === "ADMIN" && (
-                      <Link
-                        href="/admin"
-                        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/20 rounded-lg"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        <Shield className="size-4" /> Panel Admin
-                      </Link>
+                      <>
+                        <Link
+                          href="/admin"
+                          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/20 rounded-lg"
+                          onClick={() => setUserMenuOpen(false)}
+                        >
+                          <Shield className="size-4" /> Panel Admin
+                        </Link>
+                        <Link
+                          href="/settings"
+                          className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-accent rounded-lg"
+                          onClick={() => setUserMenuOpen(false)}
+                        >
+                          <Settings className="size-4" /> Pengaturan AI
+                        </Link>
+                      </>
                     )}
-                    <Link
-                      href="/settings"
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-accent rounded-lg"
-                      onClick={() => setUserMenuOpen(false)}
-                    >
-                      <Settings className="size-4" /> Pengaturan
-                    </Link>
                     {subscription?.status === "expired" && (
                       <Link
                         href="/subscribe"
