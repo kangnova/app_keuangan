@@ -28,6 +28,7 @@ import {
   Mail,
   ChevronRight,
   Layers,
+  Server,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,6 +81,53 @@ const SOURCE_LABEL: Record<SettingSource, string> = {
   default: "bawaan aplikasi",
 };
 
+type ServerStatus = {
+  uptime: number;
+  systemUptime: number;
+  pid: number;
+  node: string;
+  appVersion: string;
+  env: string;
+  platform: string;
+  hostname: string;
+  cpus: number;
+  totalMem: number;
+  freeMem: number;
+  heapUsed: number;
+  rss: number;
+  db: string;
+  time: string;
+};
+
+function fmtDuration(s: number): string {
+  if (!isFinite(s) || s < 0) return "—";
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = Math.floor(s % 60);
+  if (d > 0) return `${d} hari ${h} jam`;
+  if (h > 0) return `${h} jam ${m} menit`;
+  if (m > 0) return `${m} menit ${sec} detik`;
+  return `${sec} detik`;
+}
+
+function fmtMB(b: number): string {
+  return `${(b / 1024 / 1024).toFixed(0)} MB`;
+}
+
+function fmtGB(b: number): string {
+  return `${(b / 1024 / 1024 / 1024).toFixed(1)} GB`;
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-line bg-muted/20 p-3">
+      <p className="text-[10px] font-medium uppercase tracking-wide text-muted">{label}</p>
+      <p className="mt-0.5 break-words text-sm font-semibold text-foreground">{value}</p>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const router = useRouter();
   const { user: currentUser, loading: authLoading, refresh } = useAuth();
@@ -112,6 +160,8 @@ export default function AdminPage() {
   const [visionModel, setVisionModel] = useState("");
   const [mockEnabled, setMockEnabled] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
+  const [serverStatus, setServerStatus] = useState<ServerStatus | null>(null);
+  const [serverLoading, setServerLoading] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -138,13 +188,29 @@ export default function AdminPage() {
     try {
       const res = await fetch("/api/settings");
       if (res.ok) {
-        const d: SettingsPayload = await res.json();
+        const raw = await res.json();
+        const d: SettingsPayload = raw.data ?? raw;
         setSettingsData(d);
         setVisionModel(d.vision.value);
         setMockEnabled(d.mock.enabled);
       }
     } catch {
       // ignore
+    }
+  }, []);
+
+  const loadServerStatus = useCallback(async () => {
+    setServerLoading(true);
+    try {
+      const res = await fetch("/api/admin/server-status");
+      if (res.ok) {
+        const raw = await res.json();
+        setServerStatus(raw.data ?? raw);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setServerLoading(false);
     }
   }, []);
 
@@ -157,8 +223,9 @@ export default function AdminPage() {
       }
       fetchUsers();
       loadSettings();
+      loadServerStatus();
     }
-  }, [currentUser, authLoading, fetchUsers, loadSettings, router]);
+  }, [currentUser, authLoading, fetchUsers, loadSettings, loadServerStatus, router]);
 
   const handleUpdatePlan = async (action: string, payload: Record<string, unknown> = {}) => {
     if (!selectedUser) return;
@@ -772,6 +839,51 @@ export default function AdminPage() {
                     </label>
                   </div>
                 </div>
+              )}
+            </div>
+
+            {/* ===== STATUS SERVER ===== */}
+            <div className="bg-card border border-line rounded-xl p-6 shadow-sm">
+              <div className="mb-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                    <Server className="size-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold">Status Server</h2>
+                    <p className="text-xs text-muted">Informasi runtime server & penggunaan sumber daya.</p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={loadServerStatus}
+                  className="text-xs gap-1.5"
+                >
+                  <RefreshCw className={`size-3.5 ${serverLoading ? "animate-spin" : ""}`} /> Muat Ulang
+                </Button>
+              </div>
+
+              {serverStatus ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <Stat label="Uptime Aplikasi" value={fmtDuration(serverStatus.uptime)} />
+                  <Stat label="Uptime Sistem" value={fmtDuration(serverStatus.systemUptime)} />
+                  <Stat label="Waktu Server" value={new Date(serverStatus.time).toLocaleTimeString("id-ID")} />
+                  <Stat label="Node.js" value={serverStatus.node} />
+                  <Stat label="Versi Aplikasi" value={serverStatus.appVersion} />
+                  <Stat label="Database" value={serverStatus.db} />
+                  <Stat label="Platform" value={serverStatus.platform} />
+                  <Stat label="CPU Core" value={`${serverStatus.cpus} core`} />
+                  <Stat label="Memori Proses (RSS)" value={fmtMB(serverStatus.rss)} />
+                  <Stat
+                    label="RAM Sistem (terpakai/total)"
+                    value={`${fmtGB(serverStatus.totalMem - serverStatus.freeMem)} / ${fmtGB(serverStatus.totalMem)}`}
+                  />
+                  <Stat label="Hostname" value={serverStatus.hostname} />
+                  <Stat label="PID / Environment" value={`${serverStatus.pid} · ${serverStatus.env}`} />
+                </div>
+              ) : (
+                <p className="text-xs text-muted animate-pulse">Memuat data server…</p>
               )}
             </div>
           </div>
