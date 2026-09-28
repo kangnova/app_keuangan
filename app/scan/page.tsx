@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, Label, Input, Textarea } from "@/components/ui/input";
+import { LiveCameraModal } from "@/components/live-camera-modal";
 import { apiFetch } from "@/lib/client";
 import { formatRupiah } from "@/lib/format";
 import { toISODate } from "@/lib/datetime";
@@ -58,6 +59,7 @@ export default function ScanPage() {
   const cameraRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [liveCameraOpen, setLiveCameraOpen] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [accounts, setAccounts] = useState<AccountRow[]>([]);
@@ -197,7 +199,7 @@ export default function ScanPage() {
             AI baca otomatis: merchant, item, dan totalnya. Lo tinggal cek & simpan.
           </p>
           <div className="mt-1 flex gap-2">
-            <Button onClick={() => cameraRef.current?.click()}>
+            <Button onClick={() => setLiveCameraOpen(true)}>
               <Camera className="size-4" /> Kamera
             </Button>
             <Button variant="outline" onClick={() => fileRef.current?.click()}>
@@ -206,6 +208,13 @@ export default function ScanPage() {
           </div>
         </div>
       )}
+
+      <LiveCameraModal
+        isOpen={liveCameraOpen}
+        onClose={() => setLiveCameraOpen(false)}
+        onCapture={(file) => analyze(file)}
+        onFallbackToFile={() => fileRef.current?.click()}
+      />
 
       {analyzing && (
         <div className="flex flex-col items-center gap-3 py-10">

@@ -1,4 +1,4 @@
-import { handle, ok, badRequest } from "@/lib/api";
+import { handle, ok, badRequest, fail } from "@/lib/api";
 import { buildReport, currentKey, isValidPeriodKey, type Period } from "@/lib/reports";
 import { getUserIdFromRequest } from "@/lib/api-auth";
 
@@ -29,8 +29,4 @@ export async function GET(req: Request) {
     const report = await buildReport(userId, period, key);
     return ok(report);
   });
-}
-
-function fail(status: number, message: string) {
-  return { status, message };
 }

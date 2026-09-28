@@ -5,9 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Shield, Sparkles, CreditCard, ArrowRight, Check } from "lucide-react";
+import { Loader2, Shield, Sparkles, CreditCard, Check } from "lucide-react";
 import { toast } from "sonner";
-import { validateRequest } from "@/lib/auth";
 
 const PLANS = [
   {
@@ -125,11 +124,11 @@ export default function SubscribePage() {
                 <Button
                   className="w-full"
                   size="lg"
-                  variant={plan.popular ? "default" : "outline"}
+                  variant={plan.popular ? "primary" : "outline"}
                   onClick={() => subscribe(plan.id)}
                   loading={loading === plan.id}
                 >
-                  {loading === planId ? (
+                  {loading === plan.id ? (
                     <>
                       <Loader2 className="size-4 mr-2 animate-spin" />
                       Memproses...

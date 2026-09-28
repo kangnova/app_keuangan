@@ -1,13 +1,13 @@
 import { db } from "@/lib/db";
 import { getDebtRemainingMap } from "@/lib/balance";
-import { handle, ok, badRequest, parseBody } from "@/lib/api";
+import { handle, ok, badRequest, fail, parseBody } from "@/lib/api";
 import { debtCreateSchema } from "@/lib/validators";
 import { getUserIdFromRequest } from "@/lib/api-auth";
 
 export async function GET(req: Request) {
   return handle(async () => {
     const userId = await getUserIdFromRequest(req as any);
-    if (!userId) return { debts: [], totalRemaining: 0 };
+    if (!userId) return ok({ debts: [], totalRemaining: 0 });
 
     const [debts, remainingMap] = await Promise.all([
       db.debt.findMany({
@@ -81,8 +81,4 @@ export async function POST(req: Request) {
     });
     return ok(debt, { status: 201 });
   });
-}
-
-function fail(status: number, message: string) {
-  return { status, message };
 }

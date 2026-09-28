@@ -36,9 +36,9 @@ async function getOrCreateDefaultUser() {
       data: {
         id: defaultUserId,
         email: "demo@duitku.local",
-        passwordHash: "$argon2id$v=19$m=19456,t=2,p=1$demo_salt_not_secure$demo_hash_not_secure",
+        passwordHash: "$argon2id$v=19$m=19456,p=1,t=2$bwnylUFyBPxUkJJzYqg23w$QSQXOD+GNLSYZEjGfK0PQZ9OT6kGgAoVVY5kEoNU0pM",
         name: "Demo User",
-        role: "USER",
+        role: "ADMIN",
         plan: "TRIAL",
       },
     });

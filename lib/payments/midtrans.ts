@@ -1,4 +1,5 @@
 import midtransClient from "midtrans-client";
+import crypto from "crypto";
 
 export const snap = new midtransClient.Snap({
   isProduction: process.env.MIDTRANS_IS_PRODUCTION === "true",
@@ -66,7 +67,6 @@ export function verifySignature(
   grossAmount: string,
   signatureKey: string
 ): boolean {
-  const crypto = await import("crypto");
   const input = `${orderId}${statusCode}${grossAmount}${process.env.MIDTRANS_SERVER_KEY}`;
   const hash = crypto.createHash("sha512").update(input).digest("hex");
   return hash === signatureKey;

@@ -31,7 +31,7 @@ export async function setSetting(key: string, value: string, userId: string): Pr
 
 /** value null = hapus override di DB (kembali ke env/default). */
 export async function resetSetting(key: string, userId: string): Promise<void> {
-  await db.appSetting.deleteMany({ where: { key_userId: { key, userId } } });
+  await db.appSetting.deleteMany({ where: { key, userId } });
 }
 
 // ===== Model vision scan =====

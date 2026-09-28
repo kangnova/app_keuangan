@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User, LogOut, Shield, Sparkles, CreditCard } from "lucide-react";
+import { Menu, X, User, LogOut, Shield, Sparkles, CreditCard, Settings } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-hooks";
 import { toast } from "sonner";
@@ -13,6 +13,7 @@ export function Header() {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const isDemoAccount = Boolean(user && (user.isDemo || user.email.startsWith("demo_") || subscription?.status === "demo"));
 
   async function handleLogout() {
     try {
@@ -48,69 +49,28 @@ export function Header() {
           <span className="hidden sm:block">Duitku</span>
         </Link>
 
-        <nav className="hidden md:flex md:items-center md:gap-1">
-          {user ? (
-            <>
-              <Link
-                href="/accounts"
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted hover:text-foreground hover:bg-accent transition"
-              >
-                Akun
-              </Link>
-              <Link
-                href="/transactions"
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted hover:text-foreground hover:bg-accent transition"
-              >
-                Transaksi
-              </Link>
-              <Link
-                href="/scan"
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted hover:text-foreground hover:bg-accent transition"
-              >
-                <Sparkles className="inline size-3.5" /> Scan
-              </Link>
-              <Link
-                href="/reports"
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted hover:text-foreground hover:bg-accent transition"
-              >
-                Laporan
-              </Link>
-              <Link
-                href="/debts"
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted hover:text-foreground hover:bg-accent transition"
-              >
-                Hutang
-              </Link>
-              <Link
-                href="/settings"
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted hover:text-foreground hover:bg-accent transition"
-              >
-                Pengaturan
-              </Link>
-            </>
-          ) : (
-            <>
-              <Link
-                href="/demo"
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-brand hover:bg-brand/10 transition"
-              >
-                <Sparkles className="inline size-3.5 mr-1" /> Demo
-              </Link>
-              <Link
-                href="/login"
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted hover:text-foreground hover:bg-accent transition"
-              >
-                Masuk
-              </Link>
-              <Link
-                href="/register"
-                className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand/90 transition"
-              >
-                <Shield className="inline size-3.5 mr-1" /> Daftar
-              </Link>
-            </>
-          )}
-        </nav>
+        {!user && (
+          <nav className="hidden md:flex md:items-center md:gap-1">
+            <Link
+              href="/demo"
+              className="rounded-lg px-3 py-1.5 text-sm font-medium text-brand hover:bg-brand/10 transition"
+            >
+              <Sparkles className="inline size-3.5 mr-1" /> Demo
+            </Link>
+            <Link
+              href="/login"
+              className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted hover:text-foreground hover:bg-accent transition"
+            >
+              Masuk
+            </Link>
+            <Link
+              href="/register"
+              className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand/90 transition"
+            >
+              <Shield className="inline size-3.5 mr-1" /> Daftar
+            </Link>
+          </nav>
+        )}
 
         <div className="flex items-center gap-2">
           {user ? (
@@ -122,7 +82,12 @@ export function Header() {
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
               >
                 <User className="size-4" />
-                <span className="hidden sm:block">{user.name || user.email.split("@")[0]}</span>
+                <span className="hidden sm:block">{isDemoAccount ? "Demo User" : (user.name || user.email.split("@")[0])}</span>
+                {isDemoAccount && (
+                  <span className="hidden sm:inline-flex rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                    DEMO
+                  </span>
+                )}
                 <ChevronDown className="size-3.5" />
               </Button>
 
@@ -131,8 +96,17 @@ export function Header() {
                   <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
                   <div className="absolute right-0 top-full z-50 mt-2 w-56 origin-top-right rounded-xl bg-popover border border-line shadow-lg p-1 animate-in fade-in-0 zoom-in-95">
                     <div className="px-3 py-2 border-b border-line">
-                      <p className="text-sm font-medium">{user.name || "User"}</p>
-                      <p className="text-xs text-muted truncate">{user.email}</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium">{isDemoAccount ? "Demo User" : (user.name || "User")}</p>
+                        {isDemoAccount && (
+                          <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                            DEMO
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted truncate">
+                        {isDemoAccount ? "Akun Tamu (Mode Demo)" : user.email}
+                      </p>
                       <div className="mt-1.5 flex items-center gap-1.5">
                         {subscription?.status === "pro" && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
@@ -156,6 +130,15 @@ export function Header() {
                         )}
                       </div>
                     </div>
+                    {user.role === "ADMIN" && (
+                      <Link
+                        href="/admin"
+                        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/20 rounded-lg"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <Shield className="size-4" /> Panel Admin
+                      </Link>
+                    )}
                     <Link
                       href="/settings"
                       className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-accent rounded-lg"
@@ -201,35 +184,23 @@ export function Header() {
             </>
           )}
 
-          <button
-            className="md:hidden p-2 rounded-lg text-muted hover:bg-accent"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
-          </button>
+          {!user && (
+            <button
+              className="md:hidden p-2 rounded-lg text-muted hover:bg-accent"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+            </button>
+          )}
         </div>
       </div>
 
-      {mobileMenuOpen && (
+      {mobileMenuOpen && !user && (
         <div className="md:hidden border-t border-line bg-background p-4 animate-in slide-in-from-top-2">
           <nav className="flex flex-col gap-2">
-            {user ? (
-              <>
-                <Link href="/accounts" className="rounded-lg px-3 py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>Akun</Link>
-                <Link href="/transactions" className="rounded-lg px-3 py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>Transaksi</Link>
-                <Link href="/scan" className="rounded-lg px-3 py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>Scan Struk</Link>
-                <Link href="/reports" className="rounded-lg px-3 py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>Laporan</Link>
-                <Link href="/debts" className="rounded-lg px-3 py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>Hutang</Link>
-                <Link href="/settings" className="rounded-lg px-3 py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>Pengaturan</Link>
-                <button onClick={handleLogout} className="rounded-lg px-3 py-2 text-sm font-medium text-rose-600 text-left">Keluar</button>
-              </>
-            ) : (
-              <>
-                <Link href="/demo" className="rounded-lg px-3 py-2 text-sm font-medium text-brand" onClick={() => setMobileMenuOpen(false)}>Demo Gratis</Link>
-                <Link href="/login" className="rounded-lg px-3 py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>Masuk</Link>
-                <Link href="/register" className="rounded-lg px-3 py-2 text-sm font-medium text-brand" onClick={() => setMobileMenuOpen(false)}>Daftar</Link>
-              </>
-            )}
+            <Link href="/demo" className="rounded-lg px-3 py-2 text-sm font-medium text-brand" onClick={() => setMobileMenuOpen(false)}>Demo Gratis</Link>
+            <Link href="/login" className="rounded-lg px-3 py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>Masuk</Link>
+            <Link href="/register" className="rounded-lg px-3 py-2 text-sm font-medium text-brand" onClick={() => setMobileMenuOpen(false)}>Daftar</Link>
           </nav>
         </div>
       )}

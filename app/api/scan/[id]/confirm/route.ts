@@ -2,20 +2,25 @@ import { db } from "@/lib/db";
 import { handle, ok, notFound, badRequest, fail, parseBody } from "@/lib/api";
 import { scanConfirmSchema } from "@/lib/validators";
 import { formatRupiah } from "@/lib/format";
+import { getUserIdFromRequest } from "@/lib/api-auth";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function POST(req: Request, { params }: Ctx) {
   return handle(async () => {
+    const userId = await getUserIdFromRequest(req as any);
+    if (!userId) return fail(401, "Unauthorized");
+
     const { id } = await params;
-    const scan = await db.receiptScan.findUnique({ where: { id } });
+    // Cek kepemilikan scan — cegah IDOR (user lain tidak bisa konfirmasi scan orang lain)
+    const scan = await db.receiptScan.findFirst({ where: { id, userId } });
     if (!scan) return notFound("Scan");
     if (scan.status !== "PENDING") {
       return fail(409, `Scan ini sudah diproses (status: ${scan.status})`);
     }
 
     const input = await parseBody(req, scanConfirmSchema);
-    const account = await db.account.findUnique({ where: { id: input.accountId } });
+    const account = await db.account.findFirst({ where: { id: input.accountId, userId } });
     if (!account) return badRequest("Akun sumber tidak ditemukan");
 
     const parsed = JSON.parse(scan.parsedJson) as { total: number; merchant: string; date: string | null };
@@ -24,7 +29,7 @@ export async function POST(req: Request, { params }: Ctx) {
     // Kategori opsional; kalau dipilih harus EXPENSE
     let categoryId: string | null = input.categoryId ?? null;
     if (categoryId) {
-      const cat = await db.category.findUnique({ where: { id: categoryId } });
+      const cat = await db.category.findFirst({ where: { id: categoryId, userId } });
       if (!cat) return badRequest("Kategori tidak ditemukan");
       if (cat.type !== "EXPENSE") return badRequest("Pilih kategori pengeluaran");
     }
@@ -42,6 +47,7 @@ export async function POST(req: Request, { params }: Ctx) {
           accountId: input.accountId,
           categoryId,
           source: "AI_SCAN",
+          userId,
           receipt: { connect: { id: scan.id } },
         },
         include: { category: true, account: true },

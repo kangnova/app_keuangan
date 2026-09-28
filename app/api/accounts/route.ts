@@ -1,13 +1,13 @@
 import { db } from "@/lib/db";
 import { getAccountBalances } from "@/lib/balance";
-import { handle, ok, parseBody } from "@/lib/api";
+import { handle, ok, fail, parseBody } from "@/lib/api";
 import { accountCreateSchema, accountUpdateSchema } from "@/lib/validators";
 import { getUserIdFromRequest } from "@/lib/api-auth";
 
 export async function GET(req: Request) {
   return handle(async () => {
     const userId = await getUserIdFromRequest(req as any);
-    if (!userId) return { accounts: [], total: 0 };
+    if (!userId) return ok({ accounts: [], total: 0 });
 
     const [accounts, balances] = await Promise.all([
       db.account.findMany({ where: { userId }, orderBy: [{ isActive: "desc" }, { createdAt: "asc" }] }),
@@ -28,8 +28,4 @@ export async function POST(req: Request) {
     const account = await db.account.create({ data: { ...input, userId } });
     return ok(account, { status: 201 });
   });
-}
-
-function fail(status: number, message: string) {
-  return { status, message };
 }

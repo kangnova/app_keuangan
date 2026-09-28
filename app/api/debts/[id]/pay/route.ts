@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { getDebtRemaining } from "@/lib/balance";
-import { handle, ok, notFound, badRequest, parseBody } from "@/lib/api";
+import { handle, ok, notFound, badRequest, fail, parseBody } from "@/lib/api";
 import { debtActionSchema } from "@/lib/validators";
 import { formatRupiah } from "@/lib/format";
 import { getUserIdFromRequest } from "@/lib/api-auth";
@@ -50,8 +50,4 @@ export async function POST(req: Request, { params }: Ctx) {
     ]);
     return ok({ transaction, remaining: remaining - input.amount, settled: willBeSettled }, { status: 201 });
   });
-}
-
-function fail(status: number, message: string) {
-  return { status, message };
 }

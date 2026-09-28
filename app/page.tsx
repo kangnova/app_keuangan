@@ -7,7 +7,6 @@ import { QuickActions } from "@/components/quick-actions";
 import { ChevronRight, Scale, Tags, ScanLine, BarChart3, Settings } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { validateRequest } from "@/lib/auth";
-import { getUserIdFromRequest } from "@/lib/api-auth";
 
 export const dynamic = "force-dynamic";
 

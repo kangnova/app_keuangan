@@ -83,9 +83,9 @@ Aturan:
 - Balas JSON murni. Tidak boleh ada teks di luar JSON.`;
 
 /** Panggil vision model untuk mem-parsing foto struk (dataURL base64). */
-export async function parseReceiptImage(dataUrl: string): Promise<ReceiptParsed> {
+export async function parseReceiptImage(dataUrl: string, userId: string): Promise<ReceiptParsed> {
   // Model bisa dioverride dari halaman Pengaturan (DB), fallback ke env/default.
-  const { value: model } = await getScanVisionModel();
+  const { value: model } = await getScanVisionModel(userId);
   const client = getClient();
 
   const completion = await client.chat.completions.create({
@@ -138,12 +138,12 @@ const MOCK_RECEIPT: ReceiptParsed = {
   category_suggestion: "Makan",
 };
 
-export async function parseReceipt(dataUrl: string): Promise<{ parsed: ReceiptParsed; mock: boolean }> {
-  if (await isScanMockMode()) {
+export async function parseReceipt(dataUrl: string, userId: string): Promise<{ parsed: ReceiptParsed; mock: boolean }> {
+  if (await isScanMockMode(userId)) {
     // Sedikit variasi biar beberapa scan punya total berbeda
     const mock = { ...MOCK_RECEIPT, total: MOCK_RECEIPT.total };
     return { parsed: mock, mock: true };
   }
-  const parsed = await parseReceiptImage(dataUrl);
+  const parsed = await parseReceiptImage(dataUrl, userId);
   return { parsed, mock: false };
 }

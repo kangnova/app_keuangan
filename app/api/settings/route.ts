@@ -1,4 +1,4 @@
-import { handle, ok, parseBody } from "@/lib/api";
+import { handle, ok, fail, parseBody } from "@/lib/api";
 import { settingsUpdateSchema } from "@/lib/validators";
 import {
   SETTING_KEYS,
@@ -14,7 +14,7 @@ export async function GET(req: Request) {
   return handle(async () => {
     const userId = await getUserIdFromRequest(req as any);
     if (!userId) {
-      return { vision: { value: "gpt-4o-mini", source: "default", overridden: false, options: VISION_MODEL_OPTIONS }, mock: { enabled: false, source: "default" }, apiKeySet: !!process.env.SUMOPOD_API_KEY };
+      return ok({ vision: { value: "gpt-4o-mini", source: "default", overridden: false, options: VISION_MODEL_OPTIONS }, mock: { enabled: false, source: "default" }, apiKeySet: !!process.env.SUMOPOD_API_KEY });
     }
 
     const [vision, mock, apiKeySet] = await Promise.all([
@@ -61,8 +61,4 @@ export async function PUT(req: Request) {
       mock: { enabled: mock.enabled, source: mock.source },
     });
   });
-}
-
-function fail(status: number, message: string) {
-  return { status, message };
 }

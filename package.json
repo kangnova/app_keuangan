@@ -11,13 +11,15 @@
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "make-admin": "tsx scripts/make-admin.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@lucia-auth/adapter-prisma": "^4.0.1",
+    "arctic": "^3.7.0",
     "argon2": "^0.45.1",
     "exceljs": "^4.4.0",
     "lucia": "^3.2.2",

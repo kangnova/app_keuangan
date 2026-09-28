@@ -1,6 +1,6 @@
 import { convertDemoToRealUser, lucia } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { hash } from "argon2";
+import { argon2id, hash } from "argon2";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
     const passwordHash = await hash(password, {
-      type: "argon2id",
+      type: argon2id,
       memoryCost: 19456,
       timeCost: 2,
       parallelism: 1,

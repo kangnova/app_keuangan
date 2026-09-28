@@ -20,7 +20,9 @@ export async function POST(request: NextRequest) {
     }
 
     const plan = getPlan(planId as PlanId)!;
-    const orderId = `SUB-${user.id}-${Date.now()}-${randomUUID().slice(0, 8)}`;
+    // Format: SUB-{userId}-{planId}-{timestamp}-{uuid}
+    // Webhook membaca planId dari segmen ke-3 (index 2) untuk membedakan monthly vs yearly
+    const orderId = `SUB-${user.id}-${plan.id}-${Date.now()}-${randomUUID().slice(0, 8)}`;
 
     const transaction = await createSnapTransaction({
       orderId,
@@ -36,13 +38,6 @@ export async function POST(request: NextRequest) {
         },
       ],
       redirectUrl: redirectUrl || `${process.env.NEXT_PUBLIC_APP_URL}/subscribe/success`,
-    });
-
-    await db.user.update({
-      where: { id: user.id },
-      data: {
-        plan: "PENDING_PAYMENT",
-      },
     });
 
     return NextResponse.json({

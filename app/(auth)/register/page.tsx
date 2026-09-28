@@ -8,12 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, Lock, User, Loader2, Eye, EyeOff, Shield } from "lucide-react";
+import { GoogleSignInButton } from "@/components/auth/google-button";
 import { toast } from "sonner";
+import { useEffect } from "react";
 
 export default function RegisterPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/";
+  const errorParam = searchParams.get("error");
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -21,6 +24,16 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (errorParam === "google_not_configured") {
+      toast.error("Google Client ID belum dikonfigurasi di file .env");
+    } else if (errorParam === "oauth_failed") {
+      toast.error("Gagal mendaftar dengan akun Google. Silakan coba lagi.");
+    } else if (errorParam === "invalid_oauth_state") {
+      toast.error("Sesi autentikasi Google kedaluwarsa. Silakan ulangi.");
+    }
+  }, [errorParam]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -71,7 +84,19 @@ export default function RegisterPage() {
           <CardDescription>Mulai kelola keuangan dengan AI scan struk</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-4">
+            <GoogleSignInButton text="Daftar dengan Google" />
+
+            <div className="relative flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-line" />
+              </div>
+              <span className="relative bg-card px-2 text-xs uppercase tracking-wider text-muted">
+                atau dengan email
+              </span>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="name">Nama Lengkap</Label>
               <div className="relative">
@@ -152,6 +177,7 @@ export default function RegisterPage() {
               <Shield className="size-4 mr-2" /> Daftar & Mulai Trial 3 Hari
             </Button>
           </form>
+        </div>
 
           <div className="mt-6 text-center text-sm text-muted">
             Sudah punya akun?{" "}

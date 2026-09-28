@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { handle, ok, badRequest, parseBody } from "@/lib/api";
+import { handle, ok, badRequest, fail, parseBody } from "@/lib/api";
 import { transactionCreateSchema, noteRequiredError } from "@/lib/validators";
 import { currentMonthKey, monthRange } from "@/lib/datetime";
 import { getUserIdFromRequest } from "@/lib/api-auth";
@@ -7,7 +7,7 @@ import { getUserIdFromRequest } from "@/lib/api-auth";
 export async function GET(req: Request) {
   return handle(async () => {
     const userId = await getUserIdFromRequest(req as any);
-    if (!userId) return { transactions: [], month: currentMonthKey() };
+    if (!userId) return ok({ transactions: [], month: currentMonthKey() });
 
     const url = new URL(req.url);
     const month = url.searchParams.get("month") ?? currentMonthKey();
@@ -76,8 +76,4 @@ export async function POST(req: Request) {
     });
     return ok(transaction, { status: 201 });
   });
-}
-
-function fail(status: number, message: string) {
-  return { status, message };
 }

@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { handle, badRequest } from "@/lib/api";
+import { handle, badRequest, fail } from "@/lib/api";
 import { buildReport, currentKey, isValidPeriodKey, periodRange, type Period, type ReportData } from "@/lib/reports";
 import { formatRupiah } from "@/lib/format";
 import { getUserIdFromRequest } from "@/lib/api-auth";
@@ -368,8 +368,4 @@ export async function GET(req: Request) {
     if (format === "html") return exportHtml(report);
     return badRequest("Format harus: xlsx, pdf, atau html");
   });
-}
-
-function fail(status: number, message: string) {
-  return { status, message };
 }

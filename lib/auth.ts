@@ -2,6 +2,7 @@ import { PrismaAdapter } from "@lucia-auth/adapter-prisma";
 import { Lucia, Session, User } from "lucia";
 import { db } from "@/lib/db";
 import { cache } from "react";
+import { cookies } from "next/headers";
 
 const adapter = new PrismaAdapter(db.session, db.user);
 
@@ -45,7 +46,9 @@ interface DatabaseUserAttributes {
 
 export const validateRequest = cache(
   async (): Promise<{ user: User; session: Session } | { user: null; session: null }> => {
-    const sessionId = lucia.readSessionCookie();
+    // Gunakan cookies() dari next/headers agar berfungsi di App Router Server Components
+    const cookieStore = await cookies();
+    const sessionId = lucia.readSessionCookie(cookieStore.toString());
     if (!sessionId) {
       return { user: null, session: null };
     }
@@ -53,10 +56,12 @@ export const validateRequest = cache(
     const result = await lucia.validateSession(sessionId);
     try {
       if (result.session && result.session.fresh) {
-        lucia.setSessionCookie(result.session.id);
+        const sessionCookie = lucia.createSessionCookie(result.session.id);
+        cookieStore.set(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
       }
       if (!result.session) {
-        lucia.deleteSessionCookie();
+        const blankCookie = lucia.createBlankSessionCookie();
+        cookieStore.set(blankCookie.name, blankCookie.value, blankCookie.attributes);
       }
     } catch {}
     return result;

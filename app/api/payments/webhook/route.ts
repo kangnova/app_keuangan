@@ -38,9 +38,11 @@ export async function POST(request: NextRequest) {
       (transaction_status === "pending" && fraud_status === "accept");
 
     if (isSuccess) {
-      const planId = order_id.startsWith("SUB-") ? "pro_monthly" : "pro_monthly";
-      const planType = planId === "pro_yearly" ? "yearly" : "monthly";
-      const monthsToAdd = planType === "yearly" ? 12 : 1;
+      // orderId format: SUB-{userId}-{planId}-{timestamp}-{uuid}
+      // Ekstrak planId dari segmen ke-3 (index 2)
+      const parts = order_id.split("-");
+      const planId = parts[2] ?? "pro_monthly";
+      const monthsToAdd = planId === "pro_yearly" ? 12 : 1;
 
       const subscriptionEndsAt = new Date();
       subscriptionEndsAt.setMonth(subscriptionEndsAt.getMonth() + monthsToAdd);

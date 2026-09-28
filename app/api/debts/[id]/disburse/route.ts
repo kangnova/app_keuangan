@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { handle, ok, notFound, badRequest, parseBody } from "@/lib/api";
+import { handle, ok, notFound, badRequest, fail, parseBody } from "@/lib/api";
 import { debtActionSchema } from "@/lib/validators";
 import { getUserIdFromRequest } from "@/lib/api-auth";
 
@@ -37,8 +37,4 @@ export async function POST(req: Request, { params }: Ctx) {
     ]);
     return ok({ transaction }, { status: 201 });
   });
-}
-
-function fail(status: number, message: string) {
-  return { status, message };
 }

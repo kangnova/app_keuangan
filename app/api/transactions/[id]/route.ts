@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { handle, ok, notFound, badRequest, parseBody } from "@/lib/api";
+import { handle, ok, notFound, badRequest, fail, parseBody } from "@/lib/api";
 import { transactionUpdateSchema, noteRequiredError } from "@/lib/validators";
 import { getUserIdFromRequest } from "@/lib/api-auth";
 
@@ -67,8 +67,4 @@ export async function DELETE(req: Request, { params }: Ctx) {
     await db.transaction.delete({ where: { id } });
     return ok({ deleted: id });
   });
-}
-
-function fail(status: number, message: string) {
-  return { status, message };
 }

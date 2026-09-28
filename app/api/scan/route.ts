@@ -15,7 +15,7 @@ export async function POST(req: Request) {
       return fail(401, "Unauthorized");
     }
 
-    if (!(await isScanMockMode()) && !process.env.SUMOPOD_API_KEY) {
+    if (!(await isScanMockMode(userId)) && !process.env.SUMOPOD_API_KEY) {
       return fail(503, "Fitur scan belum dikonfigurasi: isi SUMOPOD_API_KEY di .env (dashboard Sumopod), atau aktifkan Mode Demo di halaman Pengaturan.");
     }
 
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     let parsed;
     let mock = false;
     try {
-      const result = await parseReceipt(image);
+      const result = await parseReceipt(image, userId);
       parsed = result.parsed;
       mock = result.mock;
     } catch (e) {

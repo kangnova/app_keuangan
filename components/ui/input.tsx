@@ -21,9 +21,9 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
   },
 );
 
-export function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
+export function Label({ children, required, htmlFor }: { children: React.ReactNode; required?: boolean; htmlFor?: string }) {
   return (
-    <label className="mb-1.5 block text-xs font-medium text-muted">
+    <label htmlFor={htmlFor} className="mb-1.5 block text-xs font-medium text-muted">
       {children}
       {required && <span className="text-rose-500"> *</span>}
     </label>

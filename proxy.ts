@@ -6,7 +6,7 @@ const PUBLIC_PATHS = ["/", "/login", "/register", "/demo", "/subscribe", "/api/a
 
 const PROTECTED_PATHS = ["/settings", "/scan", "/reports", "/accounts", "/categories", "/debts", "/transactions"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (PUBLIC_PATHS.some((path) => pathname.startsWith(path))) {
