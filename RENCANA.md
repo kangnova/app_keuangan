@@ -220,7 +220,7 @@ prisma/
 | Fase | Isi | Hasil |
 |------|-----|-------|
 | **1** | Init Next.js + TS + Tailwind + Prisma, schema DB, seed kategori & akun contoh | Fondasi jalan |
-| **2** | CRUD Akun + saldo, CRUD Transaksi (income/expense/transfer), Kategori, **Pencatatan Hutang** | Inti pencatatan ✅ |
+| **2** | CRUD Akun + saldo, CRUD Transaksi (income/expense/transfer), Kategori, **Pencatatan Hutang** | Inti pencatatan ✅ **SELESAI** |
 | **3** | Dashboard + Laporan (harian/mingguan/bulanan/tahunan) + charts | Analitik ✅ |
 | **4** | AI Scan Struk via Sumopod + flow review & approve | Fitur bintang ⭐ |
 | **5** | Export HTML / PDF / Excel dari laporan | Pelaporan ✅ |
@@ -262,6 +262,14 @@ notifikasi pengeluaran harian melebihi rata-rata, multi-perangkat dengan Postgre
   **bukan pemasukan**.
 - `DEBT_PAYMENT` ditolak jika melebihi sisa pokok; hutang otomatis `SETTLED` saat sisa pokok = 0.
 - Hapus hutang hanya boleh jika belum punya transaksi terkait.
+- **Konvensi opening balance hutang**: mencatat hutang baru dengan `moneyReceived: true`
+  (default, uang langsung masuk rekening) otomatis membuat transaksi
+  `DEBT_DISBURSEMENT` bertanda `source: "DEBT_OPENING"` — menambah saldo akun tapi
+  **tidak dihitung ulang** di rumus sisa pokok (pokok sudah terwakili `initialAmount`).
+  Untuk hutang lama yang uangnya sudah lama terpakai: `moneyReceived: false`.
+  Pencairan manual berikutnya (top-up) TETAP menambah pokok.
+- PATCH bersifat parsial: field yang tidak dikirim tidak boleh berubah
+  (transform Zod hanya "" → null, undefined tetap undefined).
 - Input nominal di UI pakai format ribuan ("15.000") → disimpan sebagai integer rupiah.
 
 **UI (mobile-first, bottom navigation):**
@@ -280,8 +288,11 @@ notifikasi pengeluaran harian melebihi rata-rata, multi-perangkat dengan Postgre
 4. Daftar transaksi bisa difilter per bulan, tipe, dan akun.
 5. Bisa catat hutang, cairkan, dan bayar cicilan → sisa pokok & status ter-update,
    saldo akun berubah dengan benar, laporan pengeluaran tidak terkotorkan.
-6. `tsc --noEmit` bersih dan `npm run build` sukses.
+6. `tsc --noEmit` bersih, `npm run build` sukses, dan smoke test end-to-end
+   `node scripts/smoke.mjs` lulus semua (52 assertion).
 
+> ✅ **Milestone 2 SELESAI** — 10 API route + 6 halaman + 52 smoke test lulus.
+>
 > 📌 *Detail teknis milestone berikutnya (M3 dst.) akan ditambahkan ke dokumen ini
 > di awal pengerjaan tiap milestone, mengikuti pola yang sama.*
 

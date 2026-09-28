@@ -17,7 +17,7 @@ laporan harian/mingguan/bulanan/tahunan yang bisa di-export ke HTML/PDF/Excel.
 | Fase | Isi | Status |
 |------|-----|--------|
 | 1 | Fondasi: Next.js + TS + Prisma + schema DB + seed | ✅ |
-| 2 | CRUD Akun, Transaksi (income/expense/transfer), Kategori, **Pencatatan Hutang** | 🔜 |
+| 2 | CRUD Akun, Transaksi (income/expense/transfer), Kategori, **Pencatatan Hutang** | ✅ |
 | 3 | Dashboard + Laporan 4 periode + charts | 🔜 |
 | 4 | AI Scan Struk via Sumopod + flow review | 🔜 |
 | 5 | Export HTML / PDF / Excel | 🔜 |
@@ -48,6 +48,15 @@ npm run db:seed      # isi kategori preset + akun contoh (idempoten)
 npm run db:studio    # buka Prisma Studio (GUI database)
 ```
 
+### Smoke test API (52 assertion end-to-end)
+
+```bash
+rm -f prisma/test.db && DATABASE_URL="file:./test.db" npx prisma migrate deploy
+DATABASE_URL="file:./test.db" npm run db:seed
+DATABASE_URL="file:./test.db" npx next start -p 3111 &   # di terminal terpisah
+node scripts/smoke.mjs
+```
+
 ## Konvensi Penting
 
 - 💵 **Semua nilai uang = integer rupiah** (tanpa desimal) — hindari bug pembulatan.
@@ -58,7 +67,10 @@ npm run db:studio    # buka Prisma Studio (GUI database)
 - ⚖️ **Hutang dilacak terpisah** (`model Debt`) — cicilan hutang (`DEBT_PAYMENT`)
   mengurangi saldo akun tapi **tidak dihitung sebagai pengeluaran harian**;
   pencairan hutang (`DEBT_DISBURSEMENT`) menambah saldo tapi bukan pemasukan.
-  Sisa pokok = `initialAmount + Σ disbursement − Σ payment`.
+  Sisa pokok = `initialAmount + Σ pencairan manual − Σ pembayaran`.
+  Hutang baru dengan `moneyReceived: true` otomatis membuat transaksi cair
+  `source: "DEBT_OPENING"` (naikkan saldo, tidak dobel di pokok).
+- 🧪 **PATCH API bersifat parsial** — field yang tidak dikirim tidak pernah berubah.
 
 ## Environment Variables
 
