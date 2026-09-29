@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateRequest, lucia } from "@/lib/auth";
+import { APP_URL } from "@/lib/app-url";
 
 export async function authMiddleware(
   request: NextRequest,
@@ -10,7 +11,7 @@ export async function authMiddleware(
   const { user, session } = await validateRequest();
 
   if (requireAuth && !user) {
-    const loginUrl = new URL(redirectTo, request.url);
+    const loginUrl = new URL(redirectTo, APP_URL);
     loginUrl.searchParams.set("redirect", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }
@@ -21,7 +22,7 @@ export async function authMiddleware(
     const isDemo = user.isDemo && user.demoExpiresAt && new Date(user.demoExpiresAt) > new Date();
 
     if (!isTrial && !isSubscribed && !isDemo) {
-      const subscribeUrl = new URL("/subscribe", request.url);
+      const subscribeUrl = new URL("/subscribe", APP_URL);
       subscribeUrl.searchParams.set("redirect", request.nextUrl.pathname);
       return NextResponse.redirect(subscribeUrl);
     }

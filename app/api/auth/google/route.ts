@@ -1,12 +1,13 @@
 import { generateCodeVerifier, generateState } from "arctic";
 import { google, isGoogleOAuthConfigured } from "@/lib/oauth";
+import { APP_URL } from "@/lib/app-url";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
   if (!isGoogleOAuthConfigured()) {
     return NextResponse.redirect(
-      new URL("/login?error=google_not_configured", request.url)
+      new URL("/login?error=google_not_configured", APP_URL)
     );
   }
 

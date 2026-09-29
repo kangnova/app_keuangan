@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { lucia } from "@/lib/auth";
+import { APP_URL } from "@/lib/app-url";
 
 const PUBLIC_PATHS = ["/", "/login", "/register", "/demo", "/subscribe", "/api/auth", "/api/payments/webhook"];
 
@@ -16,7 +17,7 @@ export async function proxy(request: NextRequest) {
   const sessionId = lucia.readSessionCookie(request.headers.get("cookie") || "");
 
   if (!sessionId) {
-    const loginUrl = new URL("/login", request.url);
+    const loginUrl = new URL("/login", APP_URL);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
   }
@@ -24,7 +25,7 @@ export async function proxy(request: NextRequest) {
   const { session, user } = await lucia.validateSession(sessionId);
 
   if (!session) {
-    const loginUrl = new URL("/login", request.url);
+    const loginUrl = new URL("/login", APP_URL);
     loginUrl.searchParams.set("redirect", pathname);
     const response = NextResponse.redirect(loginUrl);
     response.headers.set("Set-Cookie", lucia.createBlankSessionCookie().serialize());
@@ -45,7 +46,7 @@ export async function proxy(request: NextRequest) {
     const isDemo = user.isDemo && user.demoExpiresAt && new Date(user.demoExpiresAt) > new Date();
 
     if (!isTrial && !isSubscribed && !isDemo) {
-      const subscribeUrl = new URL("/subscribe", request.url);
+      const subscribeUrl = new URL("/subscribe", APP_URL);
       subscribeUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(subscribeUrl);
     }

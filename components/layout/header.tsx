@@ -21,7 +21,8 @@ export function Header() {
       const res = await fetch("/api/auth/logout", { method: "POST" });
       if (res.ok) {
         toast.success("Berhasil keluar");
-        refresh();
+        setUserMenuOpen(false);
+        await refresh();
         router.push("/");
       } else {
         toast.error("Gagal keluar");

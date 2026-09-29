@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 interface User {
@@ -29,35 +29,43 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    async function fetchAuth() {
-      try {
-        const [userRes, subRes] = await Promise.all([
-          fetch("/api/auth/me"),
-          fetch("/api/payments/subscription-status"),
-        ]);
+  const fetchAuth = useCallback(async () => {
+    try {
+      const [userRes, subRes] = await Promise.all([
+        fetch("/api/auth/me"),
+        fetch("/api/payments/subscription-status"),
+      ]);
 
-        if (userRes.ok) {
-          const userData = await userRes.json();
-          setUser(userData.user);
-        } else {
-          setUser(null);
-        }
-
-        if (subRes.ok) {
-          const subData = await subRes.json();
-          setSubscription(subData);
-        }
-      } catch (error) {
-        console.error("Auth fetch error:", error);
+      if (userRes.ok) {
+        const userData = await userRes.json();
+        setUser(userData.user);
+      } else {
         setUser(null);
-      } finally {
-        setLoading(false);
       }
-    }
 
-    fetchAuth();
+      if (subRes.ok) {
+        const subData = await subRes.json();
+        setSubscription(subData);
+      }
+    } catch (error) {
+      console.error("Auth fetch error:", error);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchAuth();
+  }, [fetchAuth]);
+
+  // `refresh` harus ambil ulang status auth (bukan cuma router.refresh),
+  // supaya state `user` di client ikut ter-update — misalnya setelah logout
+  // menu langsung berubah ke tampilan publik.
+  const refresh = useCallback(async () => {
+    router.refresh();
+    await fetchAuth();
+  }, [router, fetchAuth]);
 
   const hasAccess = subscription?.status !== "expired";
   const isPro = subscription?.status === "pro";
@@ -73,7 +81,7 @@ export function useAuth() {
     isTrial,
     isDemo,
     daysLeft: subscription?.daysLeft || 0,
-    refresh: () => router.refresh(),
+    refresh,
   };
 }
 

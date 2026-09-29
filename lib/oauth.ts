@@ -1,11 +1,10 @@
 import { Google } from "arctic";
-
-const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+import { APP_URL } from "@/lib/app-url";
 
 export const google = new Google(
   process.env.GOOGLE_CLIENT_ID || "",
   process.env.GOOGLE_CLIENT_SECRET || "",
-  `${appUrl}/api/auth/google/callback`
+  `${APP_URL}/api/auth/google/callback`
 );
 
 export function isGoogleOAuthConfigured(): boolean {

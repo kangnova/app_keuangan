@@ -1,5 +1,6 @@
 import { decodeIdToken } from "arctic";
 import { google } from "@/lib/oauth";
+import { APP_URL } from "@/lib/app-url";
 import { db } from "@/lib/db";
 import { lucia } from "@/lib/auth";
 import { cookies } from "next/headers";
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
 
   if (!code || !state || !storedState || !storedCodeVerifier || state !== storedState) {
     return NextResponse.redirect(
-      new URL("/login?error=invalid_oauth_state", request.url)
+      new URL("/login?error=invalid_oauth_state", APP_URL)
     );
   }
 
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     if (!claims.email) {
       return NextResponse.redirect(
-        new URL("/login?error=no_email_provided", request.url)
+        new URL("/login?error=no_email_provided", APP_URL)
       );
     }
 
@@ -92,11 +93,11 @@ export async function GET(request: NextRequest) {
     cookieStore.delete("google_oauth_state");
     cookieStore.delete("google_code_verifier");
 
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL("/", APP_URL));
   } catch (error) {
     console.error("Google OAuth callback error:", error);
     return NextResponse.redirect(
-      new URL("/login?error=oauth_failed", request.url)
+      new URL("/login?error=oauth_failed", APP_URL)
     );
   }
 }
