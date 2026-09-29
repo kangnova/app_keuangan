@@ -68,9 +68,13 @@ export const viewport: Viewport = {
   themeColor: "#059669",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -78,7 +82,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <LanguageProvider defaultLanguage="en">
           <AppShell>{children}</AppShell>
         </LanguageProvider>
