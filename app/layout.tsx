@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { AppShell } from "@/components/app-shell";
+import { LanguageProvider } from "@/lib/i18n";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -19,21 +20,18 @@ const SITE_URL = "https://artaku.my.id";
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Duitku — Aplikasi Catatan Keuangan Pribadi & AI Scan Struk",
+    default: "Duitku — Personal Finance & AI Receipt Scanner",
     template: "%s | Duitku",
   },
   description:
-    "Aplikasi catatan keuangan pribadi: catat pemasukan, pengeluaran, tabungan, dan hutang dalam satu tempat. Scan struk belanja otomatis pakai AI. Laporan harian hingga tahunan + export PDF/Excel. Gratis trial 3 hari.",
+    "Personal finance app: track income, expenses, accounts, and debts effortlessly. Scan receipts instantly with AI. Detailed daily to annual reports + PDF/Excel export. Free 3-day trial.",
   keywords: [
-    "aplikasi keuangan",
-    "catatan keuangan",
-    "aplikasi catatan pengeluaran",
-    "pencatat keuangan pribadi",
-    "scan struk AI",
-    "aplikasi hutang",
-    "aplikasi tabungan",
-    "laporan keuangan",
-    "kelola keuangan",
+    "personal finance",
+    "expense tracker",
+    "receipt scanner AI",
+    "budget manager",
+    "debt tracker",
+    "financial reports",
     "duitku",
   ],
   applicationName: "Duitku",
@@ -51,16 +49,16 @@ export const metadata: Metadata = {
     type: "website",
     url: SITE_URL,
     siteName: "Duitku",
-    title: "Duitku — Aplikasi Catatan Keuangan Pribadi & AI Scan Struk",
+    title: "Duitku — Personal Finance & AI Receipt Scanner",
     description:
-      "Catat pemasukan, pengeluaran, tabungan, dan hutang. Scan struk belanja otomatis pakai AI. Gratis trial 3 hari.",
-    locale: "id_ID",
+      "Track income, expenses, savings, and debts. Scan receipts automatically with AI. Free 3-day trial.",
+    locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Duitku — Aplikasi Catatan Keuangan Pribadi",
+    title: "Duitku — Personal Finance & AI Receipt Scanner",
     description:
-      "Catat keuangan pribadi + scan struk otomatis pakai AI. Gratis trial 3 hari.",
+      "Personal finance tracking + automatic AI receipt scanning. Free 3-day trial.",
   },
 };
 
@@ -72,16 +70,18 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="id" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme');var d=t==='dark'||((!t||t==='system')&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.add(d?'dark':'light');}catch(e){document.documentElement.classList.add('light');}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('theme');var d=t==='dark'||((!t||t==='system')&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.add(d?'dark':'light');var l=localStorage.getItem('duitku_lang')||'en';document.documentElement.lang=l;}catch(e){document.documentElement.classList.add('light');}})();`,
           }}
         />
       </head>
       <body className="min-h-full flex flex-col">
-        <AppShell>{children}</AppShell>
+        <LanguageProvider defaultLanguage="en">
+          <AppShell>{children}</AppShell>
+        </LanguageProvider>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -92,14 +92,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               url: SITE_URL,
               applicationCategory: "FinanceApplication",
               operatingSystem: "Web",
-              inLanguage: "id",
+              inLanguage: ["en", "id"],
               description:
-                "Aplikasi catatan keuangan pribadi dengan AI scan struk: catat pemasukan, pengeluaran, tabungan, dan hutang.",
+                "Personal finance app with AI receipt scanning: record income, expenses, accounts, and debts.",
               offers: {
                 "@type": "Offer",
                 price: "29000",
                 priceCurrency: "IDR",
-                description: "Langganan PRO bulanan Duitku",
+                description: "Monthly PRO Subscription",
               },
             }),
           }}

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { PageHeader } from "@/components/ui/page-header";
 import { TxList } from "@/components/tx-list";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +14,7 @@ export default async function TransactionsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-lg font-bold">Transaksi</h1>
+      <PageHeader titleKey={(t) => t.transactions.title} />
       <TxList accounts={accounts} categories={categories} />
     </div>
   );

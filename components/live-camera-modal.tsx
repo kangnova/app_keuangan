@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Camera, X, RotateCcw, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/lib/i18n";
 
 interface LiveCameraModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ export function LiveCameraModal({
   onCapture,
   onFallbackToFile,
 }: LiveCameraModalProps) {
+  const { t, language } = useLanguage();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
@@ -36,13 +38,12 @@ export function LiveCameraModal({
     setError(null);
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setError("Browser Anda tidak mendukung akses kamera langsung (WebRTC).");
+      setError(language === "en" ? "Your browser does not support camera access (WebRTC)." : "Browser Anda tidak mendukung akses kamera langsung (WebRTC).");
       setLoading(false);
       return;
     }
 
     try {
-      // Coba dengan facingMode yang diminta
       let mediaStream: MediaStream;
       try {
         mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -54,7 +55,6 @@ export function LiveCameraModal({
           audio: false,
         });
       } catch {
-        // Fallback jika facingMode ditolak (misal di webcam PC laptop tanpa back camera)
         mediaStream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: false,
@@ -77,16 +77,15 @@ export function LiveCameraModal({
       stopTracks(stream);
       setLoading(false);
       if (err instanceof DOMException && (err.name === "NotAllowedError" || err.name === "PermissionDeniedError")) {
-        setError("Izin akses kamera ditolak. Silakan izinkan akses kamera di pengaturan browser Anda.");
+        setError(language === "en" ? "Camera permission was denied. Please allow camera access in browser settings." : "Izin akses kamera ditolak. Silakan izinkan akses kamera di pengaturan browser Anda.");
       } else if (err instanceof DOMException && err.name === "NotFoundError") {
-        setError("Perangkat kamera tidak ditemukan di perangkat Anda.");
+        setError(language === "en" ? "No camera device found on your device." : "Perangkat kamera tidak ditemukan di perangkat Anda.");
       } else {
-        setError("Gagal mengakses kamera. Pastikan kamera tidak sedang dipakai aplikasi lain.");
+        setError(language === "en" ? "Failed to access camera. Make sure it is not in use by another app." : "Gagal mengakses kamera. Pastikan kamera tidak sedang dipakai aplikasi lain.");
       }
     }
-  }, [stopTracks, stream]);
+  }, [stopTracks, stream, language]);
 
-  // Aktifkan / matikan kamera berdasarkan status isOpen
   useEffect(() => {
     if (isOpen) {
       startCamera(facingMode);
@@ -100,7 +99,6 @@ export function LiveCameraModal({
     };
   }, [isOpen, facingMode]);
 
-  // Efek flash visual saat memotret
   const triggerShutter = () => {
     if (!videoRef.current || isCapturing) return;
 
@@ -156,20 +154,20 @@ export function LiveCameraModal({
         <div className="absolute top-0 inset-x-0 z-20 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/80 to-transparent">
           <div className="flex items-center gap-2 text-white">
             <Camera className="size-4 text-emerald-400" />
-            <span className="text-xs font-semibold tracking-wide">Live Scan Struk</span>
+            <span className="text-xs font-semibold tracking-wide">{language === "en" ? "Live Receipt Camera" : "Live Scan Struk"}</span>
           </div>
 
           <div className="flex items-center gap-1">
             <button
               onClick={handleToggleFacing}
-              title="Ganti Kamera"
+              title={language === "en" ? "Flip Camera" : "Ganti Kamera"}
               className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition active:scale-95"
             >
               <RotateCcw className="size-4" />
             </button>
             <button
               onClick={handleClose}
-              title="Tutup"
+              title={t.common.close}
               className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition active:scale-95"
             >
               <X className="size-5" />
@@ -184,7 +182,7 @@ export function LiveCameraModal({
           {loading && !error && (
             <div className="flex flex-col items-center gap-3 text-white/70">
               <Loader2 className="size-8 animate-spin text-emerald-500" />
-              <p className="text-xs">Menghubungkan kamera…</p>
+              <p className="text-xs">{language === "en" ? "Connecting camera…" : "Menghubungkan kamera…"}</p>
             </div>
           )}
 
@@ -203,11 +201,11 @@ export function LiveCameraModal({
                     }}
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
                   >
-                    Pilih File dari Perangkat
+                    {language === "en" ? "Select File from Device" : "Pilih File dari Perangkat"}
                   </Button>
                 )}
                 <Button variant="ghost" onClick={handleClose} className="w-full text-white/70 hover:text-white">
-                  Tutup
+                  {t.common.close}
                 </Button>
               </div>
             </div>
@@ -221,7 +219,7 @@ export function LiveCameraModal({
                 className="w-full h-full object-cover"
               />
 
-              {/* Viewfinder frame overlay untuk memandu posisi struk */}
+              {/* Viewfinder frame overlay */}
               {!loading && (
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center p-6">
                   <div className="relative w-full max-w-[280px] h-[380px] rounded-xl border-2 border-emerald-500/60 shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]">
@@ -233,7 +231,7 @@ export function LiveCameraModal({
 
                     <div className="absolute inset-x-0 -bottom-8 text-center">
                       <span className="rounded-full bg-black/60 px-3 py-1 text-[11px] font-medium text-white/90 backdrop-blur-sm">
-                        Posisikan struk di dalam kotak
+                        {language === "en" ? "Align receipt within frame" : "Posisikan struk di dalam kotak"}
                       </span>
                     </div>
                   </div>
@@ -250,7 +248,7 @@ export function LiveCameraModal({
               onClick={handleClose}
               className="text-xs font-medium text-white/70 hover:text-white px-3 py-2"
             >
-              Batal
+              {t.common.cancel}
             </button>
 
             {/* Shutter Button */}
@@ -267,7 +265,7 @@ export function LiveCameraModal({
               className="text-xs font-medium text-white/70 hover:text-white flex items-center gap-1.5 px-3 py-2"
             >
               <RotateCcw className="size-3.5" />
-              <span>Putar</span>
+              <span>{language === "en" ? "Flip" : "Putar"}</span>
             </button>
           </div>
         )}

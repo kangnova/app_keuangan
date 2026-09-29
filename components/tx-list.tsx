@@ -14,14 +14,8 @@ import { apiFetch } from "@/lib/client";
 import { formatRupiah } from "@/lib/format";
 import { currentMonthKey, dayLabel, dayStringToDate, monthLabel } from "@/lib/datetime";
 import { getIcon } from "@/lib/icons";
+import { useLanguage } from "@/lib/i18n";
 import type { AccountRow, CategoryRow, TxRow } from "@/lib/types";
-
-const TYPE_FILTERS = [
-  { value: "", label: "Semua" },
-  { value: "EXPENSE", label: "Keluar" },
-  { value: "INCOME", label: "Masuk" },
-  { value: "TRANSFER", label: "Transfer" },
-] as const;
 
 export function TxList({
   accounts,
@@ -33,6 +27,7 @@ export function TxList({
   initialMonth?: string;
 }) {
   const router = useRouter();
+  const { t, language } = useLanguage();
   const [month, setMonth] = useState(initialMonth ?? currentMonthKey());
   const [type, setType] = useState("");
   const [accountId, setAccountId] = useState("");
@@ -40,6 +35,13 @@ export function TxList({
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<TxRow | null>(null);
+
+  const typeFilters = [
+    { value: "", label: t.transactions.allTypes },
+    { value: "EXPENSE", label: t.transactions.expenseTab },
+    { value: "INCOME", label: t.transactions.incomeTab },
+    { value: "TRANSFER", label: t.transactions.transferTab },
+  ] as const;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -50,11 +52,11 @@ export function TxList({
       const data = await apiFetch<{ transactions: TxRow[] }>(`/api/transactions?${params}`);
       setRows(data.transactions);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal memuat");
+      toast.error(e instanceof Error ? e.message : t.common.error);
     } finally {
       setLoading(false);
     }
-  }, [month, type, accountId]);
+  }, [month, type, accountId, t.common.error]);
 
   useEffect(() => {
     load();
@@ -62,10 +64,10 @@ export function TxList({
 
   const grouped = useMemo(() => {
     const map = new Map<string, TxRow[]>();
-    for (const t of rows) {
-      const key = t.date.slice(0, 10);
+    for (const txItem of rows) {
+      const key = txItem.date.slice(0, 10);
       const arr = map.get(key) ?? [];
-      arr.push(t);
+      arr.push(txItem);
       map.set(key, arr);
     }
     return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
@@ -73,22 +75,22 @@ export function TxList({
 
   const monthSummary = useMemo(() => {
     let income = 0, expense = 0;
-    for (const t of rows) {
-      if (t.type === "INCOME") income += t.amount;
-      if (t.type === "EXPENSE") expense += t.amount;
+    for (const txItem of rows) {
+      if (txItem.type === "INCOME") income += txItem.amount;
+      if (txItem.type === "EXPENSE") expense += txItem.amount;
     }
     return { income, expense };
   }, [rows]);
 
-  async function remove(t: TxRow) {
-    if (!window.confirm(`Hapus transaksi ${formatRupiah(t.amount)}?`)) return;
+  async function remove(txItem: TxRow) {
+    if (!window.confirm(`${t.transactions.deleteConfirm} (${formatRupiah(txItem.amount)})`)) return;
     try {
-      await apiFetch(`/api/transactions/${t.id}`, { method: "DELETE" });
-      toast.success("Transaksi dihapus");
+      await apiFetch(`/api/transactions/${txItem.id}`, { method: "DELETE" });
+      toast.success(t.transactions.deletedSuccess);
       load();
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal menghapus");
+      toast.error(e instanceof Error ? e.message : t.common.error);
     }
   }
 
@@ -102,11 +104,11 @@ export function TxList({
     <div className="flex flex-col gap-3">
       {/* Navigasi bulan */}
       <div className="flex items-center justify-between rounded-xl bg-card px-2 py-1.5 shadow-sm">
-        <button onClick={() => shiftMonth(-1)} className="rounded-lg p-2 hover:bg-black/5 dark:hover:bg-white/10" aria-label="Bulan sebelumnya">
+        <button onClick={() => shiftMonth(-1)} className="rounded-lg p-2 hover:bg-black/5 dark:hover:bg-white/10" aria-label="Previous month">
           <ArrowLeft className="size-4" />
         </button>
-        <span className="text-sm font-semibold">{monthLabel(month)}</span>
-        <button onClick={() => shiftMonth(1)} className="rounded-lg p-2 hover:bg-black/5 dark:hover:bg-white/10" aria-label="Bulan berikutnya">
+        <span className="text-sm font-semibold">{monthLabel(month, language)}</span>
+        <button onClick={() => shiftMonth(1)} className="rounded-lg p-2 hover:bg-black/5 dark:hover:bg-white/10" aria-label="Next month">
           <ArrowRight className="size-4" />
         </button>
       </div>
@@ -114,13 +116,13 @@ export function TxList({
       {/* Ringkasan bulan */}
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-xl bg-card p-3 shadow-sm">
-          <p className="text-[11px] text-muted">Masuk bulan ini</p>
+          <p className="text-[11px] text-muted">{t.dashboard.incomeThisMonth}</p>
           <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
             {formatRupiah(monthSummary.income)}
           </p>
         </div>
         <div className="rounded-xl bg-card p-3 shadow-sm">
-          <p className="text-[11px] text-muted">Keluar bulan ini</p>
+          <p className="text-[11px] text-muted">{t.dashboard.expenseThisMonth}</p>
           <p className="text-sm font-bold text-rose-600 dark:text-rose-400">
             {formatRupiah(monthSummary.expense)}
           </p>
@@ -129,7 +131,7 @@ export function TxList({
 
       {/* Filter */}
       <div className="no-scrollbar flex gap-1.5 overflow-x-auto">
-        {TYPE_FILTERS.map((f) => (
+        {typeFilters.map((f) => (
           <button
             key={f.value}
             onClick={() => setType(f.value)}
@@ -145,7 +147,7 @@ export function TxList({
           onChange={(e) => setAccountId(e.target.value)}
           className="shrink-0 rounded-full bg-card px-3 py-1.5 text-xs font-medium text-muted shadow-sm outline-none"
         >
-          <option value="">Semua akun</option>
+          <option value="">{t.transactions.filterByAccount}</option>
           {accounts.map((a) => (
             <option key={a.id} value={a.id}>
               {a.name}
@@ -162,31 +164,32 @@ export function TxList({
       ) : grouped.length === 0 ? (
         <EmptyState
           icon={ArrowLeftRight}
-          title="Belum ada transaksi"
-          subtitle="Catat pemasukan/pengeluaran lewat tombol +, atau scan struk belanja lo."
+          title={t.transactions.noTransactionsFound}
+          subtitle={t.dashboard.startFirstTx}
         />
       ) : (
         grouped.map(([day, items]) => {
-          const dayExpense = items.filter((t) => t.type === "EXPENSE").reduce((s, t) => s + t.amount, 0);
+          const dayExpense = items.filter((item) => item.type === "EXPENSE").reduce((s, item) => s + item.amount, 0);
           return (
             <div key={day} className="flex flex-col gap-2">
               <div className="flex items-baseline justify-between px-1">
-                <span className="text-xs font-semibold">{dayLabel(dayStringToDate(day))}</span>
+                <span className="text-xs font-semibold">{dayLabel(dayStringToDate(day), undefined, language)}</span>
                 {dayExpense > 0 && (
                   <span className="text-[11px] text-muted">
-                    Keluar: <b className="text-rose-600 dark:text-rose-400">{formatRupiah(dayExpense)}</b>
+                    {t.dashboard.expense}: <b className="text-rose-600 dark:text-rose-400">{formatRupiah(dayExpense)}</b>
                   </span>
                 )}
               </div>
-              {items.map((t) => (
+              {items.map((item) => (
                 <TxRowCard
-                  key={t.id}
-                  tx={t}
+                  key={item.id}
+                  tx={item}
+                  lang={language}
                   onEdit={() => {
-                    setEditing(t);
+                    setEditing(item);
                     setFormOpen(true);
                   }}
-                  onDelete={() => remove(t)}
+                  onDelete={() => remove(item)}
                 />
               ))}
             </div>
@@ -202,7 +205,7 @@ export function TxList({
         }}
         className="fixed inset-x-0 bottom-24 z-30 mx-auto flex size-12 max-w-md items-center justify-center rounded-full bg-brand text-white shadow-lg shadow-brand/40 transition active:scale-95"
         style={{ width: "3rem" }}
-        aria-label="Catat transaksi"
+        aria-label={t.transactions.addTransaction}
       >
         <Plus className="size-5" />
       </button>
@@ -222,7 +225,7 @@ export function TxList({
   );
 }
 
-function TxRowCard({ tx, onEdit, onDelete }: { tx: TxRow; onEdit: () => void; onDelete: () => void }) {
+function TxRowCard({ tx, lang, onEdit, onDelete }: { tx: TxRow; lang: string; onEdit: () => void; onDelete: () => void }) {
   const Icon = getIcon(tx.category?.icon ?? (tx.type === "TRANSFER" ? "banknote" : null));
   const color = tx.category?.color ?? tx.account.color ?? "#94a3b8";
   const sign = tx.type === "INCOME" || tx.type === "DEBT_DISBURSEMENT" ? "+" : "−";
@@ -233,14 +236,18 @@ function TxRowCard({ tx, onEdit, onDelete }: { tx: TxRow; onEdit: () => void; on
         ? "text-sky-600 dark:text-sky-400"
         : "text-rose-600 dark:text-rose-400";
 
+  const defaultTypeLabel =
+    lang === "en"
+      ? ({ INCOME: "Income", EXPENSE: "Expense", TRANSFER: "Transfer", DEBT_PAYMENT: "Debt Payment", DEBT_DISBURSEMENT: "Debt Disbursement" }[tx.type] ?? tx.type)
+      : ({ INCOME: "Pemasukan", EXPENSE: "Pengeluaran", TRANSFER: "Transfer", DEBT_PAYMENT: "Cicilan Hutang", DEBT_DISBURSEMENT: "Cair Hutang" }[tx.type] ?? tx.type);
+
   const title =
     tx.note ||
     tx.category?.name ||
-    (tx.type === "TRANSFER" ? `Ke ${tx.toAccount?.name ?? "akun lain"}` : null) ||
+    (tx.type === "TRANSFER" ? `${lang === "en" ? "To" : "Ke"} ${tx.toAccount?.name ?? (lang === "en" ? "other account" : "akun lain")}` : null) ||
     tx.debt?.name ||
-    ({ INCOME: "Pemasukan", EXPENSE: "Pengeluaran", TRANSFER: "Transfer", DEBT_PAYMENT: "Cicilan Hutang", DEBT_DISBURSEMENT: "Cair Hutang" }[tx.type] ?? tx.type);
+    defaultTypeLabel;
 
-  // Riwayat: tampilkan kategori + akun supaya sumber/tujuan uang selalu jelas
   const subtitle =
     tx.type === "TRANSFER"
       ? `${tx.account.name} → ${tx.toAccount?.name}`
@@ -262,7 +269,7 @@ function TxRowCard({ tx, onEdit, onDelete }: { tx: TxRow; onEdit: () => void; on
               <ScanLine className="size-3" /> AI
             </Badge>
           )}
-          {tx.debt && <Badge tone="amber"><Scale className="size-3" /> Hutang</Badge>}
+          {tx.debt && <Badge tone="amber"><Scale className="size-3" /> {lang === "en" ? "Debt" : "Hutang"}</Badge>}
         </p>
         <p className="truncate text-xs text-muted">{subtitle}</p>
       </div>
@@ -275,7 +282,7 @@ function TxRowCard({ tx, onEdit, onDelete }: { tx: TxRow; onEdit: () => void; on
           <button onClick={onEdit} className="rounded-md p-1 hover:bg-black/5 dark:hover:bg-white/10" aria-label="Edit">
             <Pencil className="size-3.5 text-muted" />
           </button>
-          <button onClick={onDelete} className="rounded-md p-1 hover:bg-rose-500/10" aria-label="Hapus">
+          <button onClick={onDelete} className="rounded-md p-1 hover:bg-rose-500/10" aria-label="Delete">
             <Trash2 className="size-3.5 text-rose-500" />
           </button>
         </div>

@@ -14,10 +14,12 @@ import { Badge } from "@/components/ui/badge";
 import { apiFetch } from "@/lib/client";
 import { formatRupiah } from "@/lib/format";
 import { formatTanggal, toISODate } from "@/lib/datetime";
+import { useLanguage } from "@/lib/i18n";
 import type { AccountRow, DebtRow } from "@/lib/types";
 
 export function DebtsClient({ accounts }: { accounts: AccountRow[] }) {
   const router = useRouter();
+  const { t, language } = useLanguage();
   const [debts, setDebts] = useState<DebtRow[]>([]);
   const [totalRemaining, setTotalRemaining] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -32,24 +34,24 @@ export function DebtsClient({ accounts }: { accounts: AccountRow[] }) {
       setDebts(data.debts);
       setTotalRemaining(data.totalRemaining);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal memuat");
+      toast.error(e instanceof Error ? e.message : t.common.error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t.common.error]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   async function remove(d: DebtRow) {
-    if (!window.confirm(`Hapus hutang "${d.name}"?`)) return;
+    if (!window.confirm(`${t.debts.deleteConfirm} ("${d.name}")`)) return;
     try {
       await apiFetch(`/api/debts/${d.id}`, { method: "DELETE" });
-      toast.success("Hutang dihapus");
+      toast.success(t.common.success);
       load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal");
+      toast.error(e instanceof Error ? e.message : t.common.error);
     }
   }
 
@@ -59,10 +61,12 @@ export function DebtsClient({ accounts }: { accounts: AccountRow[] }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="rounded-2xl bg-gradient-to-br from-rose-500 to-orange-500 p-5 text-white shadow-lg shadow-rose-500/20">
-        <p className="text-xs opacity-80">Total sisa hutang</p>
+        <p className="text-xs opacity-80">{t.debts.totalRemainingDebt}</p>
         <p className="mt-1 text-3xl font-bold tabular-nums">{formatRupiah(totalRemaining)}</p>
         <p className="mt-1 text-[11px] opacity-70">
-          {active.length} hutang berjalan · cicilan tidak dihitung sebagai pengeluaran harian
+          {language === "en"
+            ? `${active.length} active debts · installments are tracked separately from daily expenses`
+            : `${active.length} hutang berjalan · cicilan tidak dihitung sebagai pengeluaran harian`}
         </p>
       </div>
 
@@ -71,7 +75,7 @@ export function DebtsClient({ accounts }: { accounts: AccountRow[] }) {
           <Loader2 className="size-6 animate-spin text-muted" />
         </div>
       ) : debts.length === 0 ? (
-        <EmptyState icon={HandCoins} title="Bebas hutang 🎉" subtitle="Catat hutang lo di sini biar cicilannya nggak nyampur dengan pengeluaran." />
+        <EmptyState icon={HandCoins} title={language === "en" ? "Debt Free 🎉" : "Bebas hutang 🎉"} subtitle={language === "en" ? "Track your loans here to separate installments from daily expenses." : "Catat hutang lo di sini biar cicilannya nggak nyampur dengan pengeluaran."} />
       ) : (
         <>
           {active.map((d) => (
@@ -79,6 +83,7 @@ export function DebtsClient({ accounts }: { accounts: AccountRow[] }) {
               key={d.id}
               debt={d}
               accounts={accounts}
+              lang={language}
               onAction={setAction}
               onEdit={(x) => {
                 setEditing(x);
@@ -90,12 +95,13 @@ export function DebtsClient({ accounts }: { accounts: AccountRow[] }) {
           ))}
           {settled.length > 0 && (
             <>
-              <p className="px-1 pt-2 text-xs font-semibold text-muted">LUNAS</p>
+              <p className="px-1 pt-2 text-xs font-semibold text-muted">{t.debts.paidOff.toUpperCase()}</p>
               {settled.map((d) => (
                 <DebtCard
                   key={d.id}
                   debt={d}
                   accounts={accounts}
+                  lang={language}
                   onAction={setAction}
                   onEdit={(x) => {
                     setEditing(x);
@@ -111,7 +117,7 @@ export function DebtsClient({ accounts }: { accounts: AccountRow[] }) {
       )}
 
       <Button onClick={() => setOpen(true)} className="mt-1 w-full" size="lg" variant="outline">
-        <Plus className="size-4" /> Catat Hutang
+        <Plus className="size-4" /> {t.debts.addDebt}
       </Button>
 
       <DebtForm
@@ -145,6 +151,7 @@ export function DebtsClient({ accounts }: { accounts: AccountRow[] }) {
 function DebtCard({
   debt: d,
   accounts,
+  lang,
   onAction,
   onEdit,
   onDelete,
@@ -152,28 +159,29 @@ function DebtCard({
 }: {
   debt: DebtRow;
   accounts: AccountRow[];
+  lang: string;
   onAction: (a: { type: "pay" | "disburse"; debt: DebtRow }) => void;
   onEdit: (d: DebtRow) => void;
   onDelete: (d: DebtRow) => void;
   onChanged: () => void;
 }) {
   const router = useRouter();
+  const { t } = useLanguage();
   const isSettled = d.status !== "ACTIVE";
-  // Robust untuk hutang yang pokoknya via pencairan: pakai terbayar / (terbayar + sisa)
   const principalTotal = d.paidTotal + Math.max(d.remaining, 0);
   const pct = principalTotal > 0 ? Math.min(100, Math.round((d.paidTotal / principalTotal) * 100)) : 0;
-  const dueLabel = d.dueDate ? formatTanggal(new Date(d.dueDate)) : null;
+  const dueLabel = d.dueDate ? formatTanggal(new Date(d.dueDate), false, lang) : null;
   const dueSoon = d.dueDate && !isSettled && new Date(d.dueDate).getTime() - Date.now() < 14 * 864e5;
 
   async function settleNow() {
-    if (!window.confirm(`Tandai "${d.name}" lunas tanpa transaksi?`)) return;
+    if (!window.confirm(lang === "en" ? `Mark "${d.name}" as settled without transaction?` : `Tandai "${d.name}" lunas tanpa transaksi?`)) return;
     try {
       await apiFetch(`/api/debts/${d.id}`, { method: "PATCH", body: JSON.stringify({ status: "SETTLED" }) });
-      toast.success("Ditandai lunas");
+      toast.success(t.common.success);
       onChanged();
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal");
+      toast.error(e instanceof Error ? e.message : t.common.error);
     }
   }
 
@@ -186,17 +194,17 @@ function DebtCard({
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 text-sm font-semibold">
             {d.name}
-            {isSettled && <Badge tone="green"><CircleCheck className="size-3" /> Lunas</Badge>}
-            {dueSoon && <Badge tone="red"><CalendarClock className="size-3" /> Jatuh tempo dekat</Badge>}
+            {isSettled && <Badge tone="green"><CircleCheck className="size-3" /> {t.debts.paidOff}</Badge>}
+            {dueSoon && <Badge tone="red"><CalendarClock className="size-3" /> {lang === "en" ? "Due soon" : "Jatuh tempo dekat"}</Badge>}
           </p>
           <p className="text-xs text-muted">
             {d.creditorName ? `${d.creditorName} · ` : ""}
-            via {d.account?.name ?? "akun"}
+            {lang === "en" ? "via" : "via"} {d.account?.name ?? (lang === "en" ? "account" : "akun")}
           </p>
         </div>
         <div className="text-right">
           <p className="text-sm font-bold tabular-nums">{formatRupiah(d.remaining)}</p>
-          <p className="text-[11px] text-muted">dari {formatRupiah(d.initialAmount)}</p>
+          <p className="text-[11px] text-muted">{lang === "en" ? "of" : "dari"} {formatRupiah(d.initialAmount)}</p>
         </div>
       </div>
 
@@ -207,7 +215,7 @@ function DebtCard({
         />
       </div>
       <p className="mt-1 text-[11px] text-muted">
-        Terbayar {formatRupiah(d.paidTotal)} ({pct}%){dueLabel ? ` · tempo ${dueLabel}` : ""}
+        {lang === "en" ? "Paid" : "Terbayar"} {formatRupiah(d.paidTotal)} ({pct}%){dueLabel ? ` · ${lang === "en" ? "due" : "tempo"} ${dueLabel}` : ""}
         {d.interestInfo ? ` · ${d.interestInfo}` : ""}
       </p>
 
@@ -215,20 +223,20 @@ function DebtCard({
         {!isSettled && (
           <>
             <Button size="sm" variant="primary" className="flex-1" onClick={() => onAction({ type: "pay", debt: d })}>
-              Bayar Cicilan
+              {t.debts.payDebt}
             </Button>
             <Button size="sm" variant="secondary" className="flex-1" onClick={() => onAction({ type: "disburse", debt: d })}>
-              <ArrowDownToLine className="size-3.5" /> Cair
+              <ArrowDownToLine className="size-3.5" /> {t.debts.disburseDebt}
             </Button>
-            <Button size="sm" variant="ghost" onClick={settleNow} title="Tandai lunas tanpa transaksi">
+            <Button size="sm" variant="ghost" onClick={settleNow} title={lang === "en" ? "Mark settled without transaction" : "Tandai lunas tanpa transaksi"}>
               <CircleCheck className="size-4 text-emerald-600 dark:text-emerald-400" />
             </Button>
           </>
         )}
-        <Button size="sm" variant="ghost" onClick={() => onEdit(d)} title="Edit">
+        <Button size="sm" variant="ghost" onClick={() => onEdit(d)} title={t.common.edit}>
           <Pencil className="size-4 text-muted" />
         </Button>
-        <Button size="sm" variant="ghost" onClick={() => onDelete(d)} title="Hapus">
+        <Button size="sm" variant="ghost" onClick={() => onDelete(d)} title={t.common.delete}>
           <Trash2 className="size-4 text-rose-500" />
         </Button>
       </div>
@@ -249,6 +257,7 @@ function DebtForm({
   editing: DebtRow | null;
   onSaved: () => void;
 }) {
+  const { t, language } = useLanguage();
   const [name, setName] = useState("");
   const [creditorName, setCreditorName] = useState("");
   const [initialAmount, setInitialAmount] = useState<number | null>(null);
@@ -281,9 +290,9 @@ function DebtForm({
   }, [open, editing]);
 
   async function save() {
-    if (!name.trim()) return toast.error("Nama hutang wajib diisi");
-    if (!initialAmount) return toast.error("Isi pokok hutang");
-    if (!accountId) return toast.error("Pilih akun terkait");
+    if (!name.trim()) return toast.error(language === "en" ? "Debt name is required" : "Nama hutang wajib diisi");
+    if (!initialAmount) return toast.error(language === "en" ? "Principal amount is required" : "Isi pokok hutang");
+    if (!accountId) return toast.error(language === "en" ? "Please select associated account" : "Pilih akun terkait");
     setSaving(true);
     try {
       const payload = {
@@ -297,36 +306,36 @@ function DebtForm({
       };
       if (editing) {
         await apiFetch(`/api/debts/${editing.id}`, { method: "PATCH", body: JSON.stringify(payload) });
-        toast.success("Hutang diupdate");
+        toast.success(t.common.success);
       } else {
         await apiFetch("/api/debts", { method: "POST", body: JSON.stringify(payload) });
-        toast.success("Hutang dicatat");
+        toast.success(t.common.success);
       }
       onSaved();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal menyimpan");
+      toast.error(e instanceof Error ? e.message : t.common.error);
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <Sheet open={open} onClose={onClose} title={editing ? "Edit Hutang" : "Catat Hutang Baru"}>
+    <Sheet open={open} onClose={onClose} title={editing ? t.debts.editDebt : t.debts.addDebt}>
       <div className="flex flex-col gap-4">
         <div>
-          <Label required>Untuk apa hutangnya?</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="cth: Paylater Shopee, Pinjem Budi" maxLength={80} />
+          <Label required>{t.debts.debtName}</Label>
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t.debts.debtNamePlaceholder} maxLength={80} />
         </div>
         <AmountInput value={initialAmount} onChange={setInitialAmount} />
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label>Pemberi hutang</Label>
-            <Input value={creditorName} onChange={(e) => setCreditorName(e.target.value)} placeholder="cth: Budi / Bank X" maxLength={80} />
+            <Label>{t.debts.lenderBorrower}</Label>
+            <Input value={creditorName} onChange={(e) => setCreditorName(e.target.value)} placeholder="e.g. Bank / Lender" maxLength={80} />
           </div>
           <div>
-            <Label>Akun terkait</Label>
+            <Label>{t.debts.paymentAccount}</Label>
             <Select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-              <option value="">Pilih akun</option>
+              <option value="">{t.transactions.selectAccount}</option>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}
@@ -337,20 +346,20 @@ function DebtForm({
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label>Jatuh tempo</Label>
+            <Label>{t.debts.dueDate}</Label>
             <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
           </div>
           <div>
-            <Label>Info bunga</Label>
-            <Input value={interestInfo} onChange={(e) => setInterestInfo(e.target.value)} placeholder="cth: bunga 2%/bln" maxLength={60} />
+            <Label>{t.debts.interestRate}</Label>
+            <Input value={interestInfo} onChange={(e) => setInterestInfo(e.target.value)} placeholder="e.g. 2%/month" maxLength={60} />
           </div>
         </div>
         <div>
-          <Label>Catatan</Label>
-          <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="opsional" maxLength={200} />
+          <Label>{t.debts.notes}</Label>
+          <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder={t.common.optional} maxLength={200} />
         </div>
         <Button onClick={save} loading={saving} size="lg" className="w-full">
-          Simpan
+          {t.common.save}
         </Button>
       </div>
     </Sheet>
@@ -368,6 +377,7 @@ function DebtActionSheet({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const { t, language } = useLanguage();
   const isPay = action.type === "pay";
   const [amount, setAmount] = useState<number | null>(isPay ? action.debt.remaining : null);
   const [accountId, setAccountId] = useState(action.debt.accountId);
@@ -376,34 +386,34 @@ function DebtActionSheet({
   const [saving, setSaving] = useState(false);
 
   async function submit() {
-    if (!amount) return toast.error("Isi nominal");
+    if (!amount) return toast.error(language === "en" ? "Enter amount" : "Isi nominal");
     setSaving(true);
     try {
       await apiFetch(`/api/debts/${action.debt.id}/${isPay ? "pay" : "disburse"}`, {
         method: "POST",
         body: JSON.stringify({ amount, accountId, date, note: note || null }),
       });
-      toast.success(isPay ? "Cicilan tercatat" : "Pencairan tercatat");
+      toast.success(t.common.success);
       onDone();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal");
+      toast.error(e instanceof Error ? e.message : t.common.error);
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <Sheet open onClose={onClose} title={isPay ? `Bayar ${action.debt.name}` : `Cairkan ${action.debt.name}`}>
+    <Sheet open onClose={onClose} title={isPay ? `${t.debts.payDebt}: ${action.debt.name}` : `${t.debts.disburseDebt}: ${action.debt.name}`}>
       <div className="flex flex-col gap-4">
         {isPay && (
           <div className="rounded-xl bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
-            Sisa pokok: <b>{formatRupiah(action.debt.remaining)}</b> — pembayaran melebihi ini akan ditolak.
+            {language === "en" ? "Remaining balance:" : "Sisa pokok:"} <b>{formatRupiah(action.debt.remaining)}</b>
           </div>
         )}
         <AmountInput value={amount} onChange={setAmount} autoFocus />
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label>{isPay ? "Bayar dari" : "Masuk ke akun"}</Label>
+            <Label>{isPay ? t.debts.paymentAccount : t.transactions.toAccountLabel}</Label>
             <Select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>
@@ -413,16 +423,16 @@ function DebtActionSheet({
             </Select>
           </div>
           <div>
-            <Label>Tanggal</Label>
+            <Label>{t.transactions.dateLabel}</Label>
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
         </div>
         <div>
-          <Label>Catatan</Label>
-          <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="opsional" maxLength={120} />
+          <Label>{t.transactions.noteLabel}</Label>
+          <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t.common.optional} maxLength={120} />
         </div>
         <Button onClick={submit} loading={saving} size="lg" className="w-full">
-          {isPay ? "Bayar" : "Catat Pencairan"}
+          {isPay ? t.debts.payDebt : t.debts.disburseDebt}
         </Button>
       </div>
     </Sheet>

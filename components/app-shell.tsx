@@ -5,15 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-hooks";
 import { Home, ArrowLeftRight, Scale, ScanLine, BarChart3, Wallet } from "lucide-react";
 
-const NAV_LEFT = [
-  { href: "/", label: "Beranda", icon: Home },
-  { href: "/transactions", label: "Transaksi", icon: ArrowLeftRight },
-  { href: "/debts", label: "Hutang", icon: Scale },
-];
-const NAV_RIGHT = [
-  { href: "/reports", label: "Laporan", icon: BarChart3 },
-  { href: "/accounts", label: "Akun", icon: Wallet },
-];
+import { useLanguage } from "@/lib/i18n";
 
 function NavItem({ href, label, icon: Icon, active }: { href: string; label: string; icon: typeof Home; active: boolean }) {
   return (
@@ -32,18 +24,28 @@ function NavItem({ href, label, icon: Icon, active }: { href: string; label: str
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, loading } = useAuth();
+  const { t } = useLanguage();
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
-  // Rute admin: desktop penuh, tanpa batasan mobile max-w-md dan tanpa bottom bar
+  // Admin routes: full desktop view without mobile bottom nav
   if (pathname.startsWith("/admin")) {
     return <div className="min-h-dvh w-full bg-background">{children}</div>;
   }
 
-  // Halaman publik (belum login): landing, login, register, demo → full-width, tanpa bottom nav.
-  // SSR untuk crawler (tanpa cookie) sudah full-width — ini yang di-index Google.
+  // Public pages (unauthenticated): landing, login, register, demo
   if (!loading && !user) {
     return <div className="min-h-dvh w-full bg-background">{children}</div>;
   }
+
+  const navLeft = [
+    { href: "/", label: t.nav.home, icon: Home },
+    { href: "/transactions", label: t.nav.transactions, icon: ArrowLeftRight },
+    { href: "/debts", label: t.nav.debts, icon: Scale },
+  ];
+  const navRight = [
+    { href: "/reports", label: t.nav.reports, icon: BarChart3 },
+    { href: "/accounts", label: t.nav.accounts, icon: Wallet },
+  ];
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col">
@@ -51,22 +53,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/95 backdrop-blur">
         <div className="mx-auto grid max-w-md grid-cols-5 items-end px-2 pt-1.5">
-          {NAV_LEFT.map((n) => (
+          {navLeft.map((n) => (
             <NavItem key={n.href} {...n} active={isActive(n.href)} />
           ))}
           <div className="flex justify-center">
             <Link
               href="/scan"
-              aria-label="Scan Struk"
+              aria-label={t.nav.scan}
               className={`-mt-6 flex size-14 flex-col items-center justify-center rounded-2xl bg-brand text-white shadow-lg shadow-brand/30 transition active:scale-95 ${
                 isActive("/scan") ? "ring-4 ring-brand/30" : ""
               }`}
             >
               <ScanLine className="size-6" />
-              <span className="text-[9px] font-semibold">Scan</span>
+              <span className="text-[9px] font-semibold">{t.nav.scan}</span>
             </Link>
           </div>
-          {NAV_RIGHT.map((n) => (
+          {navRight.map((n) => (
             <NavItem key={n.href} {...n} active={isActive(n.href)} />
           ))}
         </div>

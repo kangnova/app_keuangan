@@ -7,10 +7,13 @@ import { Menu, X, User, LogOut, Shield, Sparkles, CreditCard, Settings } from "l
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-hooks";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageToggle } from "@/components/language-toggle";
+import { useLanguage } from "@/lib/i18n";
 import { toast } from "sonner";
 
 export function Header() {
   const { user, subscription, loading, refresh } = useAuth();
+  const { t } = useLanguage();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -20,15 +23,15 @@ export function Header() {
     try {
       const res = await fetch("/api/auth/logout", { method: "POST" });
       if (res.ok) {
-        toast.success("Berhasil keluar");
+        toast.success(t.nav.logout + " " + t.common.success.toLowerCase());
         setUserMenuOpen(false);
         await refresh();
         router.push("/");
       } else {
-        toast.error("Gagal keluar");
+        toast.error(t.common.error);
       }
     } catch {
-      toast.error("Terjadi kesalahan");
+      toast.error(t.common.error);
     }
   }
 
@@ -57,24 +60,25 @@ export function Header() {
               href="/demo"
               className="rounded-lg px-3 py-1.5 text-sm font-medium text-brand hover:bg-brand/10 transition"
             >
-              <Sparkles className="inline size-3.5 mr-1" /> Demo
+              <Sparkles className="inline size-3.5 mr-1" /> {t.nav.demo}
             </Link>
             <Link
               href="/login"
               className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted hover:text-foreground hover:bg-accent transition"
             >
-              Masuk
+              {t.nav.login}
             </Link>
             <Link
               href="/register"
               className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand/90 transition"
             >
-              <Shield className="inline size-3.5 mr-1" /> Daftar
+              <Shield className="inline size-3.5 mr-1" /> {t.nav.register}
             </Link>
           </nav>
         )}
 
         <div className="flex items-center gap-2">
+          <LanguageToggle />
           <ThemeToggle />
           {user ? (
             <div className="relative">
@@ -85,7 +89,7 @@ export function Header() {
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
               >
                 <User className="size-4" />
-                <span className="hidden sm:block">{isDemoAccount ? "Demo User" : (user.name || user.email.split("@")[0])}</span>
+                <span className="hidden sm:block">{isDemoAccount ? t.nav.demoUser : (user.name || user.email.split("@")[0])}</span>
                 {isDemoAccount && (
                   <span className="hidden sm:inline-flex rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
                     DEMO
@@ -100,7 +104,7 @@ export function Header() {
                   <div className="absolute right-0 top-full z-50 mt-2 w-56 origin-top-right rounded-xl bg-popover border border-line shadow-lg p-1 animate-in fade-in-0 zoom-in-95">
                     <div className="px-3 py-2 border-b border-line">
                       <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">{isDemoAccount ? "Demo User" : (user.name || "User")}</p>
+                        <p className="text-sm font-medium">{isDemoAccount ? t.nav.demoUser : (user.name || "User")}</p>
                         {isDemoAccount && (
                           <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
                             DEMO
@@ -108,7 +112,7 @@ export function Header() {
                         )}
                       </div>
                       <p className="text-xs text-muted truncate">
-                        {isDemoAccount ? "Akun Tamu (Mode Demo)" : user.email}
+                        {isDemoAccount ? t.nav.guestAccount : user.email}
                       </p>
                       <div className="mt-1.5 flex items-center gap-1.5">
                         {subscription?.status === "pro" && (
@@ -118,17 +122,17 @@ export function Header() {
                         )}
                         {subscription?.status === "trial" && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                            <Sparkles className="size-2.5" /> Trial {subscription.daysLeft} hari
+                            <Sparkles className="size-2.5" /> {t.nav.trialDaysLeft.replace("{days}", String(subscription.daysLeft))}
                           </span>
                         )}
                         {subscription?.status === "demo" && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                            <Sparkles className="size-2.5" /> Demo {subscription.daysLeft} hari
+                            <Sparkles className="size-2.5" /> {t.nav.demoDaysLeft.replace("{days}", String(subscription.daysLeft))}
                           </span>
                         )}
                         {subscription?.status === "expired" && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-medium text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
-                            <CreditCard className="size-2.5" /> Expired
+                            <CreditCard className="size-2.5" /> {t.nav.expired}
                           </span>
                         )}
                       </div>
@@ -140,14 +144,14 @@ export function Header() {
                           className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/20 rounded-lg"
                           onClick={() => setUserMenuOpen(false)}
                         >
-                          <Shield className="size-4" /> Panel Admin
+                          <Shield className="size-4" /> {t.nav.adminPanel}
                         </Link>
                         <Link
                           href="/settings"
                           className="flex items-center gap-2 px-3 py-2 text-sm text-muted hover:text-foreground hover:bg-accent rounded-lg"
                           onClick={() => setUserMenuOpen(false)}
                         >
-                          <Settings className="size-4" /> Pengaturan AI
+                          <Settings className="size-4" /> {t.nav.aiSettings}
                         </Link>
                       </>
                     )}
@@ -157,15 +161,15 @@ export function Header() {
                         className="flex items-center gap-2 px-3 py-2 text-sm text-brand hover:bg-brand/10 rounded-lg"
                         onClick={() => setUserMenuOpen(false)}
                       >
-                        <CreditCard className="size-4" /> Upgrade PRO
+                        <CreditCard className="size-4" /> {t.nav.upgradePro}
                       </Link>
                     )}
                     <hr className="my-1 border-line" />
                     <button
                       onClick={handleLogout}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 rounded-lg"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg"
                     >
-                      <LogOut className="size-4" /> Keluar
+                      <LogOut className="size-4" /> {t.nav.logout}
                     </button>
                   </div>
                 </>
@@ -175,15 +179,15 @@ export function Header() {
             <>
               <Link href="/demo" className="hidden sm:block">
                 <Button variant="outline" size="sm">
-                  <Sparkles className="size-3.5 mr-1.5" /> Demo Gratis
+                  <Sparkles className="size-3.5 mr-1.5" /> {t.nav.demoFree}
                 </Button>
               </Link>
               <Link href="/login">
-                <Button variant="ghost" size="sm">Masuk</Button>
+                <Button variant="ghost" size="sm">{t.nav.login}</Button>
               </Link>
               <Link href="/register">
                 <Button size="sm">
-                  <Shield className="size-3.5 mr-1.5" /> Daftar
+                  <Shield className="size-3.5 mr-1.5" /> {t.nav.register}
                 </Button>
               </Link>
             </>
@@ -203,9 +207,9 @@ export function Header() {
       {mobileMenuOpen && !user && (
         <div className="md:hidden border-t border-line bg-background p-4 animate-in slide-in-from-top-2">
           <nav className="flex flex-col gap-2">
-            <Link href="/demo" className="rounded-lg px-3 py-2 text-sm font-medium text-brand" onClick={() => setMobileMenuOpen(false)}>Demo Gratis</Link>
-            <Link href="/login" className="rounded-lg px-3 py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>Masuk</Link>
-            <Link href="/register" className="rounded-lg px-3 py-2 text-sm font-medium text-brand" onClick={() => setMobileMenuOpen(false)}>Daftar</Link>
+            <Link href="/demo" className="rounded-lg px-3 py-2 text-sm font-medium text-brand" onClick={() => setMobileMenuOpen(false)}>{t.nav.demoFree}</Link>
+            <Link href="/login" className="rounded-lg px-3 py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>{t.nav.login}</Link>
+            <Link href="/register" className="rounded-lg px-3 py-2 text-sm font-medium text-brand" onClick={() => setMobileMenuOpen(false)}>{t.nav.register}</Link>
           </nav>
         </div>
       )}

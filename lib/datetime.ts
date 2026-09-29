@@ -27,28 +27,30 @@ export function currentMonthKey(d = new Date()): string {
 }
 
 /** "2026-09" -> "September 2026" */
-export function monthLabel(ym: string): string {
+export function monthLabel(ym: string, lang = "en"): string {
   const { start } = monthRange(ym);
-  return new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric" }).format(start);
+  return new Intl.DateTimeFormat(lang === "id" ? "id-ID" : "en-US", { month: "long", year: "numeric" }).format(start);
 }
 
-/** Label tanggal: "Hari ini" / "Kemarin" / "Sen, 28 Sep" */
-export function dayLabel(d: Date, today = new Date()): string {
+/** Label tanggal: "Today" / "Yesterday" / "Mon, Sep 28" (or "Hari ini" / "Kemarin" in ID) */
+export function dayLabel(d: Date, today = new Date(), lang = "en"): string {
   const a = toISODate(d);
   const b = toISODate(today);
-  if (a === b) return "Hari ini";
+  if (a === b) return lang === "id" ? "Hari ini" : "Today";
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-  if (a === toISODate(yesterday)) return "Kemarin";
-  return new Intl.DateTimeFormat("id-ID", {
+  if (a === toISODate(yesterday)) return lang === "id" ? "Kemarin" : "Yesterday";
+  return new Intl.DateTimeFormat(lang === "id" ? "id-ID" : "en-US", {
     weekday: "short",
     day: "numeric",
     month: "short",
   }).format(d);
 }
 
-export function formatTanggal(d: Date, withTime = false): string {
-  return new Intl.DateTimeFormat("id-ID", {
+export function formatTanggal(d: Date, withTimeOrLang: boolean | string = false, maybeLang = "en"): string {
+  const withTime = typeof withTimeOrLang === "boolean" ? withTimeOrLang : false;
+  const lang = typeof withTimeOrLang === "string" ? withTimeOrLang : maybeLang;
+  return new Intl.DateTimeFormat(lang === "id" ? "id-ID" : "en-US", {
     day: "numeric",
     month: "short",
     year: "numeric",

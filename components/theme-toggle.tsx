@@ -3,14 +3,11 @@
 import { useEffect, useState } from "react";
 import { Sun, Moon, Monitor } from "lucide-react";
 
+import { useLanguage } from "@/lib/i18n";
+
 type Theme = "light" | "dark" | "system";
 
 const ORDER: Theme[] = ["light", "dark", "system"];
-const LABELS: Record<Theme, string> = {
-  light: "Terang",
-  dark: "Gelap",
-  system: "Otomatis",
-};
 
 function resolveDark(theme: Theme): boolean {
   if (theme === "light") return false;
@@ -26,13 +23,20 @@ function applyTheme(theme: Theme) {
 
 export function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>("system");
+  const { t } = useLanguage();
+
+  const labels: Record<Theme, string> = {
+    light: t.theme.light,
+    dark: t.theme.dark,
+    system: t.theme.system,
+  };
 
   useEffect(() => {
     const saved = (localStorage.getItem("theme") as Theme) || "system";
     setTheme(saved);
     applyTheme(saved);
 
-    // Saat mode "Otomatis", ikuti perubahan setting sistem (gelap/terang OS)
+    // Follow OS system setting changes when in 'system' mode
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const onChange = () => {
       const current = localStorage.getItem("theme") as Theme | null;
@@ -49,11 +53,13 @@ export function ThemeToggle() {
     applyTheme(next);
   }
 
+  const currentLabel = labels[theme] || theme;
+
   return (
     <button
       onClick={cycle}
-      aria-label={`Tema: ${LABELS[theme]} (klik untuk ganti)`}
-      title={`Tema: ${LABELS[theme]} — klik untuk ganti`}
+      aria-label={`${t.theme.theme}: ${currentLabel} (${t.theme.clickToChange})`}
+      title={`${t.theme.theme}: ${currentLabel} — ${t.theme.clickToChange}`}
       className="flex size-9 items-center justify-center rounded-lg text-muted transition hover:bg-accent hover:text-foreground"
     >
       {theme === "light" && <Sun className="size-5" />}

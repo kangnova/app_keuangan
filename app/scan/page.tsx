@@ -12,6 +12,7 @@ import { LiveCameraModal } from "@/components/live-camera-modal";
 import { apiFetch } from "@/lib/client";
 import { formatRupiah } from "@/lib/format";
 import { toISODate } from "@/lib/datetime";
+import { useLanguage } from "@/lib/i18n";
 import type { AccountRow, CategoryRow } from "@/lib/types";
 import type { ReceiptParsed } from "@/lib/ai";
 
@@ -34,13 +35,13 @@ async function compressImage(file: File): Promise<string> {
   const dataUrl = await new Promise<string>((resolve, reject) => {
     const fr = new FileReader();
     fr.onload = () => resolve(fr.result as string);
-    fr.onerror = () => reject(new Error("Gagal membaca file"));
+    fr.onerror = () => reject(new Error("Failed to read file"));
     fr.readAsDataURL(file);
   });
   const img = await new Promise<HTMLImageElement>((resolve, reject) => {
     const im = new Image();
     im.onload = () => resolve(im);
-    im.onerror = () => reject(new Error("File bukan gambar yang valid"));
+    im.onerror = () => reject(new Error("File is not a valid image"));
     im.src = dataUrl;
   });
   const maxSide = 1280;
@@ -56,6 +57,7 @@ async function compressImage(file: File): Promise<string> {
 
 export default function ScanPage() {
   const router = useRouter();
+  const { t, language } = useLanguage();
   const cameraRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -77,7 +79,7 @@ export default function ScanPage() {
       const d = await apiFetch<{ scans: PendingScan[] }>("/api/scan");
       setPending(d.scans.filter((s) => s.status === "PENDING"));
     } catch {
-      /* diam saja */
+      /* ignore */
     }
   }, []);
 
@@ -110,11 +112,11 @@ export default function ScanPage() {
       setResult(res);
       setTotal(res.parsed.total);
       setDate(res.parsed.date ?? toISODate(new Date()));
-      setNote(res.parsed.merchant ? `${res.parsed.merchant} (struk)` : "");
-      toast.success(res.mock ? "Mode demo: hasil parse contoh" : "Struk terbaca!");
+      setNote(res.parsed.merchant ? `${res.parsed.merchant} (${language === "en" ? "receipt" : "struk"})` : "");
+      toast.success(res.mock ? t.scan.demoReceiptParsed : t.scan.receiptParsedSuccess);
       loadPending();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal menganalisa struk");
+      toast.error(e instanceof Error ? e.message : (language === "en" ? "Failed to analyze receipt" : "Gagal menganalisa struk"));
     } finally {
       setAnalyzing(false);
     }
@@ -122,20 +124,20 @@ export default function ScanPage() {
 
   async function confirm() {
     if (!result) return;
-    if (!accountId) return toast.error("Pilih akun dulu — duit keluar dari mana?");
-    if (!total || total <= 0) return toast.error("Total tidak valid, perbaiki dulu");
+    if (!accountId) return toast.error(language === "en" ? "Please select account — where did the money come from?" : "Pilih akun dulu — duit keluar dari mana?");
+    if (!total || total <= 0) return toast.error(language === "en" ? "Invalid total amount, please correct it" : "Total tidak valid, perbaiki dulu");
     setSaving(true);
     try {
       const r = await apiFetch<{ message: string }>(`/api/scan/${result.scan.id}/confirm`, {
         method: "POST",
         body: JSON.stringify({ accountId, categoryId: categoryId || null, date: date || null, note: note || null }),
       });
-      toast.success(r.message ?? "Tersimpan");
+      toast.success(r.message ?? t.transactions.savedSuccess);
       reset();
       loadPending();
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal menyimpan");
+      toast.error(e instanceof Error ? e.message : t.common.error);
     } finally {
       setSaving(false);
     }
@@ -144,11 +146,11 @@ export default function ScanPage() {
   async function discard(id: string) {
     try {
       await apiFetch(`/api/scan/${id}/discard`, { method: "POST" });
-      toast.success("Scan dibuang");
+      toast.success(t.scan.scanDiscarded);
       if (result?.scan.id === id) reset();
       loadPending();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal");
+      toast.error(e instanceof Error ? e.message : t.common.error);
     }
   }
 
@@ -163,15 +165,9 @@ export default function ScanPage() {
     if (cameraRef.current) cameraRef.current.value = "";
   }
 
-  async function reanalyzePending(s: PendingScan) {
-    // Foto tidak dikirim ulang (arsip di server); antrean hanya pengingat —
-    // alur ulang: user foto lagi. Kartu pending bisa langsung dibuang.
-    await discard(s.id);
-  }
-
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-lg font-bold">Scan Struk</h1>
+      <h1 className="text-lg font-bold">{t.scan.title}</h1>
 
       <input
         ref={cameraRef}
@@ -194,16 +190,16 @@ export default function ScanPage() {
           <div className="flex size-16 items-center justify-center rounded-2xl bg-brand-soft text-brand">
             <ScanLine className="size-8" />
           </div>
-          <p className="text-sm font-semibold">Foto struk belanja lo</p>
+          <p className="text-sm font-semibold">{t.scan.instructionTitle}</p>
           <p className="max-w-64 text-xs text-muted">
-            AI baca otomatis: merchant, item, dan totalnya. Lo tinggal cek & simpan.
+            {t.scan.instructionDesc}
           </p>
           <div className="mt-1 flex gap-2">
             <Button onClick={() => setLiveCameraOpen(true)}>
-              <Camera className="size-4" /> Kamera
+              <Camera className="size-4" /> {t.scan.cameraBtn}
             </Button>
             <Button variant="outline" onClick={() => fileRef.current?.click()}>
-              <ImageIcon className="size-4" /> Galeri
+              <ImageIcon className="size-4" /> {t.scan.galleryBtn}
             </Button>
           </div>
         </div>
@@ -218,20 +214,20 @@ export default function ScanPage() {
 
       {analyzing && (
         <div className="flex flex-col items-center gap-3 py-10">
-          {preview && <img src={preview} alt="Struk" className="max-h-48 rounded-xl border border-line" />}
+          {preview && <img src={preview} alt="Receipt preview" className="max-h-48 rounded-xl border border-line" />}
           <Loader2 className="size-7 animate-spin text-brand" />
-          <p className="text-sm text-muted">AI sedang membaca struk…</p>
+          <p className="text-sm text-muted">{t.scan.readingReceipt}</p>
         </div>
       )}
 
       {result && (
         <div className="flex flex-col gap-3">
-          {preview && <img src={preview} alt="Struk" className="max-h-52 self-center rounded-xl border border-line" />}
+          {preview && <img src={preview} alt="Receipt preview" className="max-h-52 self-center rounded-xl border border-line" />}
 
           {result.warnings.length > 0 && (
             <div className="rounded-xl bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
               <p className="mb-1 flex items-center gap-1 font-semibold">
-                <TriangleAlert className="size-3.5" /> Cek lagi:
+                <TriangleAlert className="size-3.5" /> {t.scan.recheckNotice}
               </p>
               <ul className="list-inside list-disc space-y-0.5">
                 {result.warnings.map((w, i) => (
@@ -257,13 +253,13 @@ export default function ScanPage() {
               </div>
             )}
             <div className="mt-3">
-              <Label required>Total (perbaiki kalau salah)</Label>
+              <Label required>{t.scan.totalLabel}</Label>
               <div className="relative">
                 <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted">Rp</span>
                 <Input
                   inputMode="numeric"
                   className="pl-10 text-right text-base font-bold"
-                  value={total ? total.toLocaleString("id-ID") : ""}
+                  value={total ? total.toLocaleString(language === "id" ? "id-ID" : "en-US") : ""}
                   onChange={(e) => setTotal(e.target.value ? Number(e.target.value.replace(/\D/g, "")) : null)}
                 />
               </div>
@@ -271,9 +267,9 @@ export default function ScanPage() {
           </div>
 
           <div>
-            <Label required>Duit keluar dari akun</Label>
+            <Label required>{t.scan.accountLabel}</Label>
             <Select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-              <option value="">Pilih akun</option>
+              <option value="">{t.transactions.selectAccount}</option>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>{a.name}</option>
               ))}
@@ -282,35 +278,35 @@ export default function ScanPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Kategori</Label>
+              <Label>{t.scan.categoryLabel}</Label>
               <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-                <option value="">Tanpa kategori</option>
+                <option value="">{t.transactions.noCategory}</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </Select>
             </div>
             <div>
-              <Label>Tanggal</Label>
+              <Label>{t.scan.dateLabel}</Label>
               <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </div>
           </div>
 
           <div>
-            <Label>Catatan</Label>
+            <Label>{t.scan.noteLabel}</Label>
             <Textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={160} />
           </div>
 
           <div className="flex gap-2">
             <Button className="flex-1" size="lg" loading={saving} onClick={confirm}>
-              <Check className="size-4" /> Simpan Pengeluaran
+              <Check className="size-4" /> {t.scan.saveExpenseBtn}
             </Button>
-            <Button variant="danger" size="lg" onClick={() => discard(result.scan.id)}>
+            <Button variant="danger" size="lg" onClick={() => discard(result.scan.id)} title={t.scan.discardBtn}>
               <Trash2 className="size-4" />
             </Button>
           </div>
           <Button variant="ghost" size="sm" onClick={reset}>
-            <RotateCcw className="size-3.5" /> Scan lain
+            <RotateCcw className="size-3.5" /> {t.scan.scanAnotherBtn}
           </Button>
         </div>
       )}
@@ -319,16 +315,16 @@ export default function ScanPage() {
       {pending.length > 0 && !result && (
         <section>
           <p className="mb-1.5 flex items-center gap-1.5 px-1 text-xs font-semibold text-muted">
-            <History className="size-3.5" /> Scan belum diproses ({pending.length})
+            <History className="size-3.5" /> {t.scan.pendingScansTitle} ({pending.length})
           </p>
           <div className="flex flex-col gap-1.5">
             {pending.map((s) => (
               <div key={s.id} className="flex items-center justify-between rounded-xl bg-card px-3 py-2.5 shadow-sm">
                 <div className="min-w-0">
-                  <p className="truncate text-xs font-medium">{s.merchant ?? "Struk"}</p>
-                  <p className="text-[10px] text-muted">{s.parsed?.total ? formatRupiah(s.parsed.total) : "—"} · belum dikonfirmasi</p>
+                  <p className="truncate text-xs font-medium">{s.merchant ?? (language === "en" ? "Receipt" : "Struk")}</p>
+                  <p className="text-[10px] text-muted">{s.parsed?.total ? formatRupiah(s.parsed.total) : "—"} · {language === "en" ? "unconfirmed" : "belum dikonfirmasi"}</p>
                 </div>
-                <button onClick={() => discard(s.id)} className="rounded-md p-1.5 hover:bg-rose-500/10" aria-label="Buang">
+                <button onClick={() => discard(s.id)} className="rounded-md p-1.5 hover:bg-rose-500/10" aria-label="Discard">
                   <Trash2 className="size-3.5 text-rose-500" />
                 </button>
               </div>

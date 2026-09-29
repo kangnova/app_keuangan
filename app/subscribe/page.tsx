@@ -6,38 +6,9 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Shield, Sparkles, CreditCard, Check } from "lucide-react";
+import { LanguageToggle } from "@/components/language-toggle";
+import { useLanguage } from "@/lib/i18n";
 import { toast } from "sonner";
-
-const PLANS = [
-  {
-    id: "pro_monthly",
-    name: "PRO Bulanan",
-    price: 29000,
-    period: "/bulan",
-    features: [
-      "AI Scan Struk unlimited",
-      "Export PDF/Excel/HTML unlimited",
-      "Laporan lengkap semua periode",
-      "Sinkronisasi multi-device",
-      "Dukungan prioritas",
-    ],
-    popular: true,
-  },
-  {
-    id: "pro_yearly",
-    name: "PRO Tahunan",
-    price: 290000,
-    period: "/tahun",
-    features: [
-      "Semua fitur PRO Bulanan",
-      "Hemat ~17% (gratis 2 bulan)",
-      "AI Scan Struk unlimited",
-      "Export PDF/Excel/HTML unlimited",
-      "Dukungan prioritas",
-    ],
-    popular: false,
-  },
-];
 
 function SubscribeContent() {
   const router = useRouter();
@@ -45,6 +16,56 @@ function SubscribeContent() {
   const redirect = searchParams.get("redirect") || "/";
   const [loading, setLoading] = useState<string | null>(null);
   const [userPlan, setUserPlan] = useState<string>("TRIAL");
+  const { t, language } = useLanguage();
+
+  const plans = [
+    {
+      id: "pro_monthly",
+      name: t.landing.monthlyPlan,
+      price: 29000,
+      period: t.landing.monthlyPeriod,
+      features:
+        language === "en"
+          ? [
+              "Unlimited AI Receipt Scans",
+              "Unlimited PDF, Excel & HTML Exports",
+              "Full Multi-period Reports & Analytics",
+              "Multi-device Cloud Sync",
+              "Priority Customer Support",
+            ]
+          : [
+              "AI Scan Struk unlimited",
+              "Export PDF/Excel/HTML unlimited",
+              "Laporan lengkap semua periode",
+              "Sinkronisasi multi-device",
+              "Dukungan prioritas",
+            ],
+      popular: true,
+    },
+    {
+      id: "pro_yearly",
+      name: t.landing.yearlyPlan,
+      price: 290000,
+      period: t.landing.yearlyPeriod,
+      features:
+        language === "en"
+          ? [
+              "All Monthly PRO features",
+              "Save ~17% (2 Months Free)",
+              "Unlimited AI Receipt Scans",
+              "Unlimited PDF, Excel & HTML Exports",
+              "Priority Customer Support",
+            ]
+          : [
+              "Semua fitur PRO Bulanan",
+              "Hemat ~17% (gratis 2 bulan)",
+              "AI Scan Struk unlimited",
+              "Export PDF/Excel/HTML unlimited",
+              "Dukungan prioritas",
+            ],
+      popular: false,
+    },
+  ];
 
   useEffect(() => {
     async function checkUser() {
@@ -65,20 +86,23 @@ function SubscribeContent() {
       const res = await fetch("/api/payments/create-subscription", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, redirectUrl: `${window.location.origin}/subscribe/success?redirect=${encodeURIComponent(redirect)}` }),
+        body: JSON.stringify({
+          planId,
+          redirectUrl: `${window.location.origin}/subscribe/success?redirect=${encodeURIComponent(redirect)}`,
+        }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Gagal membuat langganan");
+        throw new Error(data.error || (language === "en" ? "Failed to create subscription" : "Gagal membuat langganan"));
       }
 
       if (data.redirectUrl) {
         window.location.href = data.redirectUrl;
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Terjadi kesalahan");
+      toast.error(err instanceof Error ? err.message : t.common.error);
       setLoading(null);
     }
   }
@@ -86,22 +110,25 @@ function SubscribeContent() {
   return (
     <div className="min-h-screen bg-muted/30 px-4 py-12">
       <div className="max-w-4xl mx-auto">
+        <div className="flex justify-end mb-4">
+          <LanguageToggle />
+        </div>
         <div className="text-center mb-10">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand to-brand/80">
             <Sparkles className="size-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold">Upgrade ke PRO</h1>
+          <h1 className="text-3xl font-bold">{t.subscribe.title}</h1>
           <p className="text-muted mt-2">
-            Buka akses penuh AI Scan Struk, export unlimited, & laporan lengkap
+            {t.subscribe.subtitle}
           </p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6 mb-10">
-          {PLANS.map((plan) => (
+          {plans.map((plan) => (
             <Card key={plan.id} className={`relative ${plan.popular ? "ring-2 ring-brand" : ""}`}>
               {plan.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-brand text-white text-xs font-medium rounded-full">
-                  Populer
+                  {language === "en" ? "Popular" : "Populer"}
                 </div>
               )}
               <CardHeader className="text-center">
@@ -131,12 +158,12 @@ function SubscribeContent() {
                   {loading === plan.id ? (
                     <>
                       <Loader2 className="size-4 mr-2 animate-spin" />
-                      Memproses...
+                      {language === "en" ? "Processing..." : "Memproses..."}
                     </>
                   ) : (
                     <>
                       <CreditCard className="size-4 mr-2" />
-                      Pilih {plan.name}
+                      {language === "en" ? `Choose ${plan.name}` : `Pilih ${plan.name}`}
                     </>
                   )}
                 </Button>
@@ -145,14 +172,22 @@ function SubscribeContent() {
           ))}
         </div>
 
-        <Card className="border-amber-200 bg-amber-50">
+        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900/40">
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">
               <Shield className="size-5 text-amber-600 mt-0.5 shrink-0" />
-              <div className="text-sm text-amber-800">
-                <p className="font-medium">Pembayaran via Midtrans</p>
-                <p>Transfer bank, Virtual Account, e-Wallet (GoPay, ShopeePay, Dana), QRIS, Kartu Kredit</p>
-                <p className="mt-2">Setelah pembayaran berhasil, akses PRO diaktifkan otomatis via webhook.</p>
+              <div className="text-sm text-amber-800 dark:text-amber-300">
+                <p className="font-medium">{language === "en" ? "Payment via Midtrans" : "Pembayaran via Midtrans"}</p>
+                <p>
+                  {language === "en"
+                    ? "Bank Transfer, Virtual Account, e-Wallets (GoPay, ShopeePay, Dana), QRIS, Credit Card"
+                    : "Transfer bank, Virtual Account, e-Wallet (GoPay, ShopeePay, Dana), QRIS, Kartu Kredit"}
+                </p>
+                <p className="mt-2">
+                  {language === "en"
+                    ? "Once payment is confirmed, PRO features are unlocked automatically."
+                    : "Setelah pembayaran berhasil, akses PRO diaktifkan otomatis via webhook."}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -160,7 +195,7 @@ function SubscribeContent() {
 
         <div className="mt-6 text-center text-sm text-muted">
           <Link href="/" className="text-brand hover:underline">
-            ← Kembali ke Dashboard
+            {language === "en" ? "← Back to Dashboard" : "← Kembali ke Dashboard"}
           </Link>
         </div>
       </div>
@@ -169,8 +204,9 @@ function SubscribeContent() {
 }
 
 export default function SubscribePage() {
+  const { t } = useLanguage();
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-muted">Memuat...</div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-muted">{t.common.loading}</div>}>
       <SubscribeContent />
     </Suspense>
   );
