@@ -2,7 +2,7 @@
   "name": "duitku",
   "version": "0.1.0",
   "private": true,
-  "description": "Aplikasi keuangan pribadi dengan AI scan struk",
+  "description": "AI-powered personal finance tracker with real-time multi-account balance monitoring, daily expense analytics, and smart receipt OCR. Built with Next.js 16, TypeScript & Prisma.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
